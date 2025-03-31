@@ -1,0 +1,2845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="A web-based tool for designing and visualizing PLC program structures using drag-and-drop blocks, connections, and background zones.">
+    <title>PLC Program Structure Designer</title>
+    <style>
+        :root {
+            --header-height: 50px;
+            --footer-height: 40px;
+            --sidebar-width: 250px;
+            --properties-width: 300px;
+            --zone-handle-size: 8px;
+            --zone-border-color: #aaa;
+            --zone-selected-border-color: #3498db;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden; /* Prevent body scroll */
+        }
+        .header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 0 15px; /* Adjusted padding */
+            height: var(--header-height);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0; /* Prevent header shrinking */
+            z-index: 10; /* Keep header above workspace */
+        }
+        .title {
+            margin: 0;
+            font-size: 1.5em;
+            white-space: nowrap;
+        }
+        /* Main layout container */
+        .app-container {
+             display: flex;
+             flex-direction: column;
+             height: 100vh;
+             overflow: hidden;
+        }
+        main { /* Added main landmark */
+            display: flex;
+            flex: 1; /* Take remaining vertical space */
+            overflow: hidden; /* Prevent overflow from main area */
+            position: relative; /* For absolute positioning context */
+            top: var(--header-height); /* Position below header */
+            height: calc(100vh - var(--header-height) - var(--footer-height));
+        }
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: #f5f5f5;
+            border-right: 1px solid #ddd;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+        .palette-group {
+            margin-bottom: 15px;
+        }
+        .palette-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            background-color: #e0e0e0;
+            padding: 5px;
+            border-radius: 4px;
+        }
+        .palette-items {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .palette-item {
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 10px;
+            text-align: center;
+            background-color: white;
+            cursor: grab;
+            user-select: none;
+            transition: background-color 0.2s;
+        }
+        .palette-item:hover {
+            background-color: #f0f0f0;
+        }
+        .palette-item input {
+            width: 90%;
+            box-sizing: border-box;
+        }
+
+        /* Workspace Container - handles panning/zooming visually */
+        .workspace-container {
+            flex: 1;
+            background-color: #e8e8e8; /* Light grey background */
+            position: relative; /* Context for workspace */
+            overflow: hidden; /* Crucial for panning/zooming */
+            cursor: default; /* Default cursor for container */
+        }
+
+        /* Actual Workspace - content moves within container */
+        .workspace {
+            position: absolute; /* Positioned within container */
+            top: 0;
+            left: 0;
+            width: 100%; /* Start at container size */
+            height: 100%; /* Start at container size */
+            transform-origin: top left; /* Zoom/pan origin */
+            /* background removed - zones handle background */
+            cursor: grab; /* Indicate grabbable for panning */
+        }
+        .workspace.panning {
+             cursor: grabbing;
+        }
+
+        /* Background Zones container */
+        #background-zones {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none; /* Allows clicks to pass through to workspace initially */
+            z-index: 0; /* Behind blocks */
+        }
+
+        .zone {
+            position: absolute;
+            border: 2px dashed var(--zone-border-color);
+            box-sizing: border-box;
+            pointer-events: auto; /* Zones are interactive */
+            cursor: move;
+            z-index: 0; /* Ensure zones are behind blocks */
+            overflow: hidden; /* Prevent content spill */
+        }
+        .zone.selected {
+            border: 2px solid var(--zone-selected-border-color);
+            outline: 1px dashed rgba(0, 0, 0, 0.3); /* Extra visual cue */
+        }
+        .zone-handle {
+            position: absolute;
+            width: var(--zone-handle-size);
+            height: var(--zone-handle-size);
+            background-color: var(--zone-selected-border-color);
+            border: 1px solid white;
+            box-sizing: border-box;
+            display: none; /* Hidden by default */
+            z-index: 1; /* Above the zone itself */
+        }
+        .zone.selected .zone-handle {
+            display: block; /* Visible when zone is selected */
+        }
+        /* Handle positioning and cursors */
+        .zone-handle.nw { top: calc(var(--zone-handle-size) / -2); left: calc(var(--zone-handle-size) / -2); cursor: nwse-resize; }
+        .zone-handle.ne { top: calc(var(--zone-handle-size) / -2); right: calc(var(--zone-handle-size) / -2); cursor: nesw-resize; }
+        .zone-handle.sw { bottom: calc(var(--zone-handle-size) / -2); left: calc(var(--zone-handle-size) / -2); cursor: nesw-resize; }
+        .zone-handle.se { bottom: calc(var(--zone-handle-size) / -2); right: calc(var(--zone-handle-size) / -2); cursor: nwse-resize; }
+        .zone-handle.n { top: calc(var(--zone-handle-size) / -2); left: 50%; transform: translateX(-50%); cursor: ns-resize; }
+        .zone-handle.s { bottom: calc(var(--zone-handle-size) / -2); left: 50%; transform: translateX(-50%); cursor: ns-resize; }
+        .zone-handle.w { top: 50%; left: calc(var(--zone-handle-size) / -2); transform: translateY(-50%); cursor: ew-resize; }
+        .zone-handle.e { top: 50%; right: calc(var(--zone-handle-size) / -2); transform: translateY(-50%); cursor: ew-resize; }
+        .zone-name {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            font-size: 0.9em;
+            font-weight: bold;
+            color: rgba(0,0,0,0.6);
+            background-color: rgba(255, 255, 255, 0.7);
+            padding: 2px 4px;
+            border-radius: 3px;
+            user-select: none;
+        }
+
+
+        .block {
+            position: absolute;
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            padding: 10px;
+            min-width: 120px;
+            max-width: 250px;
+            height: auto; /* Let content determine height */
+            min-height: 80px; /* Minimum sensible height */
+            cursor: move; /* Changed default cursor */
+            z-index: 1; /* Blocks above zones */
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+        }
+        .block.selected { /* Style for selected block */
+             box-shadow: 0 0 10px rgba(52, 152, 219, 0.7);
+             border: 1px solid #3498db;
+        }
+
+        .block.main-program { background-color: #d5f5e3; border-left: 5px solid #27ae60; }
+        .block.function-block { background-color: #e8f8f5; border-left: 5px solid #16a085; }
+        .block.function { background-color: #ebf5fb; border-left: 5px solid #3498db; }
+        .block.data-block { background-color: #fef9e7; border-left: 5px solid #f1c40f; }
+        .block.interrupt { background-color: #fdedec; border-left: 5px solid #e74c3c; }
+        .block.hardware { background-color: #f4ecf7; border-left: 5px solid #8e44ad; }
+
+        .block-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+            padding-bottom: 5px;
+            border-bottom: 1px dashed #ccc;
+            cursor: grab; /* Title bar is primary drag area */
+        }
+        .block-type { font-size: 0.8em; color: #777; margin-bottom: 8px; text-transform: uppercase; }
+        .block-description {
+             font-size: 0.9em;
+             color: #333;
+             margin-bottom: 8px;
+             word-wrap: break-word;
+             white-space: pre-wrap; /* Respect newlines in description */
+             flex-grow: 1; /* Allow description to take space */
+        }
+        .block-id { font-size: 0.75em; color: #777; text-align: right; font-style: italic; margin-top: auto; /* Push ID to bottom */}
+        .block-ports {
+            display: flex;
+            justify-content: space-between;
+            padding-top: 8px;
+            margin-top: 5px; /* Space above ports */
+        }
+        .port {
+            width: 12px;
+            height: 12px;
+            background-color: #777;
+            border-radius: 50%;
+            cursor: crosshair; /* Cursor for connecting */
+            position: relative;
+            border: 1px solid #555; /* Add border for visibility */
+        }
+        .port:hover { background-color: #333; }
+        .port-in { background-color: #3498db; }
+        .port-out { background-color: #e74c3c; }
+
+        /* Connections - SVG approach for better scaling/positioning */
+         #connections-svg {
+             position: absolute;
+             top: 0;
+             left: 0;
+             width: 100%;
+             height: 100%;
+             pointer-events: none; /* SVG layer doesn't intercept mouse events */
+             overflow: visible; /* Allow lines to extend beyond initial bounds if needed */
+             z-index: 0; /* Draw behind blocks but above zones potentially, adjust if needed */
+         }
+
+         .connection-line {
+             stroke: #555;
+             stroke-width: 2;
+             fill: none;
+             vector-effect: non-scaling-stroke; /* Keep line thickness constant on zoom */
+         }
+
+         .connection-arrow {
+             fill: #555;
+             stroke: none;
+         }
+
+         .connection-label {
+             background-color: rgba(255, 255, 255, 0.85);
+             border: 1px solid #ddd;
+             padding: 1px 5px; /* Smaller padding */
+             border-radius: 10px;
+             font-size: 9px; /* Smaller font size */
+             position: absolute; /* Positioned within workspace */
+             transform: translate(-50%, -50%);
+             cursor: pointer;
+             z-index: 2; /* Above lines/arrows */
+             white-space: nowrap;
+             user-select: none;
+         }
+
+
+        /* Temporary line for visual feedback during connection drag */
+        #temp-connection-line {
+            position: fixed; /* Relative to viewport */
+            border-top: 2px dashed #333;
+            height: 0;
+            width: 0;
+            pointer-events: none;
+            z-index: 1001; /* Above everything */
+            display: none; /* Hidden initially */
+            transform-origin: top left;
+        }
+
+        .tools { display: flex; gap: 10px; }
+        .tool-button, .action-button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 6px 12px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            white-space: nowrap;
+        }
+        .tool-button:hover, .action-button:hover { background-color: #2980b9; }
+        .danger-button { background-color: #e74c3c; }
+        .danger-button:hover { background-color: #c0392b; }
+
+        .properties-panel {
+            width: var(--properties-width);
+            background-color: #f5f5f5;
+            border-left: 1px solid #ddd;
+            padding: 15px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            flex-shrink: 0;
+        }
+        .properties-title {
+            font-weight: bold; font-size: 1.2em; margin-bottom: 5px;
+            padding-bottom: 5px; border-bottom: 1px solid #ddd;
+        }
+        .property-group {
+            background-color: white; border-radius: 4px; padding: 10px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .property-label { font-weight: bold; margin-bottom: 5px; color: #555; display: block; } /* Made block */
+        .property-input, .property-textarea, .property-select, .property-color {
+            width: 100%; padding: 8px; margin-bottom: 8px; box-sizing: border-box;
+            border: 1px solid #ddd; border-radius: 4px;
+        }
+        .property-textarea { min-height: 80px; resize: vertical; }
+        .property-color { height: 35px; padding: 2px;} /* Style color input */
+
+        .footer {
+            background-color: #f0f0f0;
+            padding: 0 15px; /* Adjusted padding */
+            height: var(--footer-height);
+            border-top: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center; /* Center items vertically */
+            flex-shrink: 0; /* Prevent footer shrinking */
+            position: fixed; /* Keep footer at bottom */
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            box-sizing: border-box;
+            z-index: 10; /* Keep footer above workspace */
+        }
+        .status { color: #555; font-size: 0.9em;}
+        .btn-group { display: flex; gap: 8px; }
+        .button-row { display: flex; gap: 8px; justify-content: space-between; margin-top: 10px; }
+
+        .mini-map {
+            position: absolute;
+            bottom: 10px; /* Adjusted position */
+            right: 10px; /* Adjusted position */
+            width: 200px;
+            height: 150px;
+            background-color: rgba(255, 255, 255, 0.85);
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+            z-index: 1000; /* Above workspace content */
+            display: none; /* Hidden by default */
+        }
+        .mini-map-content {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transform-origin: top left;
+        }
+        .mini-map-viewport {
+            position: absolute;
+            border: 2px solid #3498db;
+            background-color: rgba(52, 152, 219, 0.1);
+            pointer-events: none;
+            box-sizing: border-box;
+        }
+        .mini-map-zone { /* Style for zones in minimap */
+            position: absolute;
+            box-sizing: border-box;
+            border: 1px solid rgba(0,0,0,0.5);
+        }
+        .mini-map-block { /* Style for blocks in minimap */
+            position: absolute;
+            box-sizing: border-box;
+            border-radius: 1px;
+        }
+        .mini-map-connection { /* Style for connections in minimap */
+             position: absolute;
+             background-color: #555;
+             height: 1px;
+             transform-origin: 0 0;
+             pointer-events: none;
+        }
+
+        .notes-panel {
+            position: absolute;
+            bottom: 10px; /* Adjusted position */
+            left: 10px; /* Adjusted position */
+            width: 250px;
+            background-color: rgba(255, 255, 255, 0.95);
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 10px;
+            z-index: 1000; /* Above workspace content */
+            max-height: 200px;
+            overflow: hidden; /* Hide overflow initially */
+            display: none; /* Hidden by default */
+            flex-direction: column; /* Enable flex for resizing */
+        }
+        .notes-title {
+            font-weight: bold; margin-bottom: 5px; padding-bottom: 5px;
+            border-bottom: 1px solid #ddd; display: flex; justify-content: space-between;
+            align-items: center; cursor: move; /* Make title draggable */
+        }
+        .notes-content { font-size: 0.9em; flex-grow: 1; /* Allow content to take space */ overflow-y: auto;}
+        #project-notes { width: 100%; height: 100%; resize: none; border: none; box-sizing: border-box;} /* Adjusted textarea */
+        .close-btn { background: none; border: none; cursor: pointer; color: #777; font-size: 1.2em; padding: 0 5px;}
+        .close-btn:hover { color: #333; }
+
+        /* Tooltip */
+        .tooltip {
+            position: fixed; /* Use fixed positioning */
+            background-color: #333;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            z-index: 2000; /* Highest */
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            white-space: nowrap;
+        }
+        /* Context menu */
+        .context-menu {
+            position: fixed; /* Use fixed positioning */
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1500; /* High */
+            display: none;
+            padding: 5px 0; /* Add padding */
+        }
+        .context-menu-item { padding: 8px 15px; cursor: pointer; white-space: nowrap; }
+        .context-menu-item:hover { background-color: #f0f0f0; }
+        .context-menu-divider { height: 1px; background-color: #ddd; margin: 5px 0; }
+        .context-menu-item.danger-button { color: #e74c3c; }
+        .context-menu-item.danger-button:hover { background-color: #fdedec; }
+
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <div class="header">
+        <h1 class="title">PLC Program Structure Designer</h1>
+        <div class="tools">
+            <button id="add-zone-btn" class="tool-button">Add Zone</button>
+            <button id="new-btn" class="tool-button">New</button>
+            <button id="save-btn" class="tool-button">Save</button>
+            <button id="load-btn" class="tool-button">Load</button>
+            <button id="export-btn" class="tool-button">Export</button>
+            <button id="notes-toggle-btn" class="tool-button">Project Notes</button>
+            <button id="help-btn" class="tool-button">Help</button>
+        </div>
+    </div>
+
+    <main>
+        <div class="sidebar">
+            <!-- Palette Groups -->
+            <div class="palette-group">
+                <div class="palette-title">Program Structure</div>
+                <div class="palette-items">
+                    <div class="palette-item" data-type="main-program">Main Program (OB)</div>
+                    <div class="palette-item" data-type="function-block">Function Block (FB)</div>
+                    <div class="palette-item" data-type="function">Function (FC)</div>
+                    <div class="palette-item" data-type="data-block">Data Block (DB)</div>
+                    <div class="palette-item" data-type="interrupt">Interrupt (OB)</div>
+                </div>
+            </div>
+
+            <div class="palette-group">
+                <div class="palette-title">Hardware Components</div>
+                <div class="palette-items">
+                    <div class="palette-item" data-type="hardware">CPU</div>
+                    <div class="palette-item" data-type="hardware">I/O Module</div>
+                    <div class="palette-item" data-type="hardware">Comm Module</div>
+                    <div class="palette-item" data-type="hardware">HMI</div>
+                    <div class="palette-item" data-type="hardware">Field Device</div>
+                </div>
+            </div>
+
+            <div class="palette-group">
+                <div class="palette-title">Program Categories</div>
+                <div class="palette-items">
+                    <div class="palette-item" data-type="function-block">Sequence Control</div>
+                    <div class="palette-item" data-type="function-block">Motion Control</div>
+                    <div class="palette-item" data-type="function-block">Process Control</div>
+                    <div class="palette-item" data-type="function-block">Alarm Handling</div>
+                    <div class="palette-item" data-type="function-block">Recipe Management</div>
+                    <div class="palette-item" data-type="function-block">Data Acquisition</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="workspace-container" class="workspace-container">
+            <div id="workspace" class="workspace">
+                <div id="background-zones"></div>
+                <svg id="connections-svg" width="100%" height="100%">
+                     <defs>
+                        <marker id="arrowhead" markerWidth="10" markerHeight="7"
+                        refX="10" refY="3.5" orient="auto" markerUnits="strokeWidth">
+                          <polygon points="0 0, 10 3.5, 0 7" class="connection-arrow"/>
+                        </marker>
+                      </defs>
+                </svg>
+                <!-- Blocks will be appended here -->
+                <!-- Connection labels will be appended here -->
+            </div>
+        </div>
+
+        <div class="properties-panel">
+            <div class="properties-title">Properties</div>
+            <div id="properties-content">
+                <!-- Project Info Group -->
+                <div class="property-group" id="project-info-group">
+                    <div class="property-label">Project Information</div>
+                    <div><span class="property-label">Name:</span><input type="text" id="project-name" class="property-input"></div>
+                    <div><span class="property-label">Author:</span><input type="text" id="project-author" class="property-input"></div>
+                    <div><span class="property-label">Date:</span><input type="date" id="project-date" class="property-input"></div>
+                    <div><span class="property-label">Description:</span><textarea id="project-description" class="property-textarea"></textarea></div>
+                    <button id="update-project-info" class="action-button">Update Project</button>
+                </div>
+
+                <!-- PLC Info Group -->
+                <div class="property-group" id="plc-info-group">
+                    <div class="property-label">PLC Information</div>
+                    <div>
+                        <span class="property-label">PLC Type:</span>
+                        <select id="plc-type" class="property-select">
+                            <option>Siemens S7-1200</option> <option>Siemens S7-1500</option> <option>Siemens S7-300</option>
+                            <option>Allen Bradley ControlLogix</option> <option>Allen Bradley CompactLogix</option>
+                            <option>Mitsubishi FX</option> <option>Omron CP</option> <option>Schneider M340</option>
+                            <option>Other</option>
+                        </select>
+                    </div>
+                    <div>
+                        <span class="property-label">Software:</span>
+                        <select id="plc-software" class="property-select">
+                            <option>TIA Portal V18</option> <option>TIA Portal V17</option> <option>TIA Portal V16</option> <option>TIA Portal V15</option>
+                            <option>Step 7 Classic</option> <option>Studio 5000</option> <option>RSLogix 5000</option>
+                            <option>GX Works 3</option> <option>CX-Programmer</option> <option>Other</option>
+                        </select>
+                    </div>
+                     <button id="update-plc-info" class="action-button">Update PLC</button>
+                </div>
+
+                 <!-- Element Specific Properties Group (Dynamically Filled) -->
+                 <div class="property-group" id="element-properties-group">
+                     <div class="property-label" id="element-properties-placeholder">Select an element to view its properties</div>
+                     {/* Content added dynamically */}
+                 </div>
+            </div>
+        </div>
+    </main>
+
+    <div class="footer">
+        <div id="status-bar" class="status">Ready</div>
+        <div class="btn-group">
+            <button id="mini-map-toggle" class="action-button" title="Toggle Mini-map">Mini-map</button>
+            <button id="zoom-out" class="action-button" title="Zoom Out">-</button>
+            <button id="zoom-reset" class="action-button" title="Reset Zoom & Pan (100%)">1:1</button>
+            <button id="zoom-in" class="action-button" title="Zoom In">+</button>
+        </div>
+    </div>
+
+    <div id="mini-map" class="mini-map">
+        <div id="mini-map-content" class="mini-map-content"></div>
+        <div id="mini-map-viewport" class="mini-map-viewport"></div>
+    </div>
+
+    <div id="notes-panel" class="notes-panel">
+        <div class="notes-title">
+            <span>Project Notes</span>
+            <button id="close-notes" class="close-btn" title="Close Notes">&times;</button>
+        </div>
+        <div class="notes-content">
+            <textarea id="project-notes"></textarea>
+        </div>
+    </div>
+
+    <div id="tooltip" class="tooltip"></div>
+
+    <div id="context-menu" class="context-menu">
+        {/* Items added dynamically */}
+    </div>
+
+    <div id="temp-connection-line"></div>
+
+</div>
+
+    <script>
+        // Wrap entire script in a try...catch for basic error handling
+        try {
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- DOM Element References ---
+            const workspaceContainer = document.getElementById('workspace-container');
+            const workspace = document.getElementById('workspace');
+            const backgroundZonesContainer = document.getElementById('background-zones');
+            const connectionsSvg = document.getElementById('connections-svg');
+            const propertiesContent = document.getElementById('properties-content');
+            const elementPropertiesGroup = document.getElementById('element-properties-group');
+            const elementPropertiesPlaceholder = document.getElementById('element-properties-placeholder');
+            const saveBtn = document.getElementById('save-btn');
+            const loadBtn = document.getElementById('load-btn');
+            const newBtn = document.getElementById('new-btn');
+            const exportBtn = document.getElementById('export-btn');
+            const helpBtn = document.getElementById('help-btn');
+            const addZoneBtn = document.getElementById('add-zone-btn');
+            const notesToggleBtn = document.getElementById('notes-toggle-btn');
+            const notesPanel = document.getElementById('notes-panel');
+            const closeNotesBtn = document.getElementById('close-notes');
+            const projectNotes = document.getElementById('project-notes');
+            const miniMap = document.getElementById('mini-map');
+            const miniMapContent = document.getElementById('mini-map-content');
+            const miniMapViewport = document.getElementById('mini-map-viewport');
+            const miniMapToggle = document.getElementById('mini-map-toggle');
+            const zoomInBtn = document.getElementById('zoom-in');
+            const zoomOutBtn = document.getElementById('zoom-out');
+            const zoomResetBtn = document.getElementById('zoom-reset');
+            const tooltip = document.getElementById('tooltip');
+            const contextMenu = document.getElementById('context-menu');
+            const tempConnectionLine = document.getElementById('temp-connection-line');
+            const statusBar = document.getElementById('status-bar');
+
+            // --- State Variables ---
+            let blocks = [];
+            let connections = [];
+            let zones = []; // Added for zones
+            let interactionState = { // Unified interaction state
+                type: null, // 'dragging', 'connecting', 'panning', 'resizing-zone'
+                target: null, // The element being interacted with (block, port, zone, handle)
+                startX: 0, startY: 0, // Initial mouse position (screen coords for pan/connect, workspace for drag/resize)
+                initialX: 0, initialY: 0, // Initial element position (workspace coords) or initial view offset (screen coords)
+                initialWidth: 0, initialHeight: 0, // For resizing
+                offsetX: 0, // For block drag calculation correction
+                offsetY: 0,
+            };
+            let selectedElement = null; // Can be block or zone
+            let nextBlockId = 1;
+            let nextZoneId = 1; // Added for zones
+            let scale = 1.0;
+            let offsetX = 0; // Pan X offset (applied to workspace)
+            let offsetY = 0; // Pan Y offset (applied to workspace)
+            let projectData = {
+                name: 'New PLC Project', author: '', date: new Date().toISOString().split('T')[0],
+                description: '', plcType: 'Siemens S7-1200', plcSoftware: 'TIA Portal V18', notes: ''
+            };
+            let lastContextMenuTarget = null; // Track element for context menu actions
+
+             // --- Constants ---
+             const MIN_ZOOM = 0.2;
+             const MAX_ZOOM = 3.0;
+             const ZOOM_SENSITIVITY = 0.001;
+             const DEFAULT_ZONE_WIDTH = 300;
+             const DEFAULT_ZONE_HEIGHT = 200;
+             const DEFAULT_ZONE_COLOR = '#f0f0f0'; // Light grey
+
+            // --- Initialization ---
+            function initializeApp() {
+                updateProjectInfoFields();
+                updatePlcInfoFields();
+                projectNotes.value = projectData.notes;
+                setupPalette();
+                setupWorkspaceListeners();
+                setupButtonListeners();
+                setupGlobalListeners();
+                updateTransform(); // Apply initial transform
+                resetPropertiesPanel();
+                updateMiniMap(); // Initial minimap setup
+                 // Show instructions after a short delay
+                setTimeout(() => {
+                    statusBar.textContent = 'Drag items from the sidebar or use "Add Zone" to start.';
+                }, 1500);
+            }
+
+            function updateProjectInfoFields() {
+                document.getElementById('project-name').value = projectData.name;
+                document.getElementById('project-author').value = projectData.author;
+                document.getElementById('project-date').value = projectData.date;
+                document.getElementById('project-description').value = projectData.description;
+            }
+
+            function updatePlcInfoFields() {
+                 document.getElementById('plc-type').value = projectData.plcType;
+                 document.getElementById('plc-software').value = projectData.plcSoftware;
+            }
+
+
+            // --- Palette Setup ---
+            function setupPalette() {
+                document.querySelectorAll('.palette-item').forEach(item => {
+                    item.setAttribute('draggable', 'true');
+
+                    item.addEventListener('dragstart', (e) => {
+                        // Data for dropping NEW items from palette
+                        e.dataTransfer.setData('text/plain', JSON.stringify({
+                            type: item.getAttribute('data-type'),
+                            name: item.textContent,
+                            isPaletteItem: true // Flag to distinguish
+                        }));
+                        e.dataTransfer.effectAllowed = 'copy';
+                         statusBar.textContent = `Dragging ${item.textContent}...`;
+                    });
+
+                     item.addEventListener('dragend', () => {
+                         // Reset status only if no other interaction started
+                         if (!interactionState.type) {
+                             statusBar.textContent = 'Ready';
+                         }
+                     });
+
+                    // Tooltips for palette items
+                    item.addEventListener('mouseenter', (e) => {
+                        showTooltip(item, getTypeDescription(item.getAttribute('data-type')), e);
+                    });
+                    item.addEventListener('mouseleave', hideTooltip);
+
+                     // Double-click to rename palette item (session only)
+                     item.addEventListener('dblclick', (e) => {
+                         makePaletteItemEditable(item);
+                     });
+                });
+            }
+
+             function makePaletteItemEditable(item) {
+                 const currentText = item.textContent;
+                 const input = document.createElement('input');
+                 input.type = 'text';
+                 input.value = currentText;
+                 input.style.width = 'calc(100% - 10px)'; // Adjust width
+                 input.style.textAlign = 'center';
+
+                 item.innerHTML = ''; // Clear existing text
+                 item.appendChild(input);
+                 input.focus();
+                 input.select();
+
+                 const finishEditing = () => {
+                     const newText = input.value.trim();
+                     item.textContent = newText || currentText; // Revert if empty
+                     input.removeEventListener('blur', finishEditing);
+                     input.removeEventListener('keydown', handleKeyDown);
+                 };
+
+                 const handleKeyDown = (e) => {
+                     if (e.key === 'Enter') {
+                         finishEditing();
+                     } else if (e.key === 'Escape') {
+                         item.textContent = currentText; // Revert
+                         finishEditing();
+                     }
+                 };
+
+                 input.addEventListener('blur', finishEditing);
+                 input.addEventListener('keydown', handleKeyDown);
+             }
+
+
+            // --- Workspace Listeners Setup ---
+            function setupWorkspaceListeners() {
+                // Drag over workspace container
+                workspaceContainer.addEventListener('dragover', (e) => {
+                    e.preventDefault(); // Necessary to allow drop
+                    // Check what's being dragged to set appropriate effect
+                     try {
+                         // Note: Accessing dataTransfer during 'dragover' is often restricted/unreliable.
+                         // Rely on the drop effect set in 'dragstart'.
+                         // We'll check the data properly in the 'drop' handler.
+                         e.dataTransfer.dropEffect = 'copy'; // Default for palette items
+                     } catch {}
+                });
+
+                // Drop onto workspace container
+                workspaceContainer.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    statusBar.textContent = 'Processing drop...';
+                    try {
+                        const dataString = e.dataTransfer.getData('text/plain');
+                        if (!dataString) return; // Exit if no data
+
+                        const data = JSON.parse(dataString); // Attempt to parse
+
+                        const coords = screenToWorkspaceCoords(e.clientX, e.clientY);
+
+                        if (data.isPaletteItem) {
+                            // Dropped from palette - create new block
+                            createNewBlock(data.type, data.name, coords.x, coords.y);
+                        } else if (data.isExistingBlock) {
+                            // If an existing block was somehow dropped onto the background,
+                            // do nothing extra (its movement is handled by mouseup)
+                        } else {
+                             console.warn("Dropped unknown data type:", data);
+                        }
+                    } catch (error) {
+                        // This catch block handles the JSON parse error if non-JSON is dropped
+                        console.error("Error processing drop data:", error);
+                        statusBar.textContent = 'Error processing drop. Check console.';
+                    } finally {
+                         // Reset status bar after a short delay, unless another message is active
+                         setTimeout(() => {
+                             if (statusBar.textContent.startsWith('Processing') || statusBar.textContent.startsWith('Error processing')) {
+                                 statusBar.textContent = 'Ready';
+                             }
+                         }, 1000);
+                    }
+                });
+
+                 // Clicking on the empty workspace container or workspace itself deselects
+                 workspaceContainer.addEventListener('mousedown', (e) => {
+                    if (e.target === workspaceContainer || e.target === workspace || e.target === backgroundZonesContainer || e.target === connectionsSvg) {
+                        // Check for panning first (Alt key or middle mouse button)
+                        if (e.altKey || e.button === 1) { // Alt key or Middle mouse button
+                            startPanning(e);
+                            e.preventDefault(); // Prevent default middle-click scroll/pan
+                        } else if (e.button === 0) { // Left click only
+                            selectElement(null); // Deselect any block or zone
+                            hideContextMenu();
+                        }
+                    }
+                 });
+
+                 // Mouse wheel zoom on the container
+                 workspaceContainer.addEventListener('wheel', handleWheelZoom, { passive: false });
+
+                 // Context menu on the empty workspace
+                 workspaceContainer.addEventListener('contextmenu', (e) => {
+                     e.preventDefault();
+                     selectElement(null); // Deselect anything
+                     showWorkspaceContextMenu(e.clientX, e.clientY); // Show specific menu
+                 });
+            }
+
+             // --- Global Listeners (for interactions like drag, pan, resize) ---
+            function setupGlobalListeners() {
+                 document.addEventListener('mousemove', handleGlobalMouseMove);
+                 document.addEventListener('mouseup', handleGlobalMouseUp);
+                 document.addEventListener('keydown', handleGlobalKeyDown);
+                 document.addEventListener('click', handleGlobalClick); // For closing context menu
+                 window.addEventListener('resize', handleWindowResize);
+            }
+
+            // --- Button Listeners Setup ---
+            function setupButtonListeners() {
+                saveBtn.addEventListener('click', saveDesign);
+                loadBtn.addEventListener('click', promptLoadDesign);
+                newBtn.addEventListener('click', () => {
+                    if (confirm('Create new design? Any unsaved changes will be lost.')) {
+                        clearWorkspace();
+                    }
+                });
+                exportBtn.addEventListener('click', exportDesignDocumentation);
+                helpBtn.addEventListener('click', showHelp);
+                addZoneBtn.addEventListener('click', () => {
+                     // Create zone roughly in the center of the current view
+                     const centerX = (-offsetX + workspaceContainer.clientWidth / 2) / scale;
+                     const centerY = (-offsetY + workspaceContainer.clientHeight / 2) / scale;
+                     createNewZone('New Zone', centerX - DEFAULT_ZONE_WIDTH / 2, centerY - DEFAULT_ZONE_HEIGHT / 2, DEFAULT_ZONE_WIDTH, DEFAULT_ZONE_HEIGHT, DEFAULT_ZONE_COLOR);
+                });
+
+                // Project/PLC Info Updates
+                 document.getElementById('update-project-info').addEventListener('click', updateProjectData);
+                 document.getElementById('update-plc-info').addEventListener('click', updatePlcData);
+
+                // Notes Panel
+                notesToggleBtn.addEventListener('click', toggleNotesPanel);
+                closeNotesBtn.addEventListener('click', () => notesPanel.style.display = 'none');
+                projectNotes.addEventListener('input', () => projectData.notes = projectNotes.value);
+                makeNotesPanelDraggable();
+
+
+                // Mini-map and Zoom
+                miniMapToggle.addEventListener('click', toggleMiniMap);
+                zoomInBtn.addEventListener('click', () => zoom(1.2));
+                zoomOutBtn.addEventListener('click', () => zoom(0.8));
+                zoomResetBtn.addEventListener('click', resetView);
+            }
+
+             // --- Coordinate Transformation ---
+             function screenToWorkspaceCoords(screenX, screenY) {
+                 const rect = workspaceContainer.getBoundingClientRect();
+                 const x = (screenX - rect.left - offsetX) / scale;
+                 const y = (screenY - rect.top - offsetY) / scale;
+                 return { x, y };
+             }
+
+              function workspaceToScreenCoords(workspaceX, workspaceY) {
+                  const rect = workspaceContainer.getBoundingClientRect();
+                  const x = workspaceX * scale + offsetX + rect.left;
+                  const y = workspaceY * scale + offsetY + rect.top;
+                  return { x, y };
+              }
+
+
+            // --- Block Management ---
+            function createNewBlock(type, name, x, y, id = null, description = null, data = {}) {
+                const blockId = id || `block-${nextBlockId++}`;
+                if (!id && blockId.split('-')[1] >= nextBlockId) {
+                    nextBlockId = parseInt(blockId.split('-')[1]) + 1; // Ensure nextId is always higher
+                }
+
+                const block = document.createElement('div');
+                block.className = `block ${type}`;
+                block.id = blockId;
+                block.setAttribute('draggable', 'true'); // Make blocks draggable for dependency drop
+                block.dataset.type = type;
+                block.dataset.name = name;
+                block.dataset.description = description || getDefaultDescription(type);
+                block.style.left = `${x}px`;
+                block.style.top = `${y}px`;
+                block.style.zIndex = data.zIndex || 1; // Use loaded zIndex or default
+
+                 // Store additional data
+                 block.dataset.parameters = data.parameters || '';
+                 block.dataset.variables = data.variables || '';
+                 block.dataset.model = data.model || '';
+                 block.dataset.address = data.address || '';
+
+                block.innerHTML = `
+                    <div class="block-type">${formatBlockType(type)}</div>
+                    <div class="block-title">${name}</div>
+                    <div class="block-description">${block.dataset.description.replace(/\n/g, '<br>')}</div>
+                    <div class="block-ports">
+                        <div class="port port-in" data-port="in" title="Input Port"></div>
+                        <div class="port port-out" data-port="out" title="Output Port"></div>
+                    </div>
+                    <div class="block-id">#${blockId.split('-')[1]}</div>
+                `;
+
+                workspace.appendChild(block);
+                blocks.push(block);
+                setupBlockInteractions(block); // Add listeners AFTER appending
+
+                selectElement(block);
+                updateMiniMap();
+                updateConnectionsForBlock(block); // Ensure connections render if loaded
+                statusBar.textContent = `Block '${name}' created.`;
+                return block;
+            }
+
+            function setupBlockInteractions(block) {
+                 // Prevent adding listeners multiple times
+                 if (block.dataset.listenerAttached) return;
+                 block.dataset.listenerAttached = 'true';
+
+                 const title = block.querySelector('.block-title');
+
+                 // --- Mousedown: Initiate Dragging or Connecting ---
+                 block.addEventListener('mousedown', (e) => {
+                     // Prevent initiating drag/connect on right click
+                     if (e.button !== 0) return;
+
+                     selectElement(block); // Select on any mousedown within the block
+
+                     if (e.target.classList.contains('port')) {
+                         // Start connecting from a port
+                         startConnecting(e, e.target);
+                     } else if (e.target === title || e.target === block) {
+                         // Start *visual* dragging the block (only from title or block background)
+                         startDragging(e, block);
+                     }
+                     // Don't start dragging if clicking description, ID, etc.
+                 });
+
+                 // --- Drag Start for Existing Blocks (for dependency drop) ---
+                 block.addEventListener('dragstart', (e) => {
+                     // Don't start drag if connection is being made
+                     if (interactionState.type === 'connecting') {
+                         e.preventDefault();
+                         return;
+                     }
+                     // Set the data transfer data *here* for existing blocks
+                     try {
+                         e.dataTransfer.setData('text/plain', JSON.stringify({
+                             id: block.id,
+                             isExistingBlock: true // Identify drag source
+                         }));
+                         e.dataTransfer.effectAllowed = 'move'; // Indicate moving the block
+                         // Optional: provide visual feedback during drag
+                         // e.target.style.opacity = '0.7';
+                         statusBar.textContent = `Dragging block '${block.dataset.name}'...`;
+                     } catch (err) {
+                          console.error("Error setting drag data:", err);
+                          e.preventDefault(); // Prevent drag if data cannot be set
+                     }
+                 });
+
+                 // --- Drag End for Existing Blocks ---
+                 block.addEventListener('dragend', (e) => {
+                     // Clean up visual feedback
+                     // e.target.style.opacity = '1';
+                     // Only reset status if no other interaction is happening
+                      if (interactionState.type !== 'connecting' && interactionState.type !== 'resizing-zone' && !statusBar.textContent.startsWith('Noted call')) {
+                          statusBar.textContent = 'Ready';
+                      }
+                      // Note: The actual block movement stops in the global mouseup handler
+                 });
+
+
+                 // --- Context Menu ---
+                 block.addEventListener('contextmenu', (e) => {
+                     e.preventDefault();
+                     e.stopPropagation(); // Prevent workspace context menu
+                     selectElement(block);
+                     showBlockContextMenu(e.clientX, e.clientY, block);
+                 });
+
+                 // --- Tooltips for Ports ---
+                 block.querySelectorAll('.port').forEach(port => {
+                     port.addEventListener('mouseenter', (e) => showTooltip(port, port.title, e));
+                     port.addEventListener('mouseleave', hideTooltip);
+                 });
+
+                  // --- Drop Target for Dependency Indication ---
+                  block.addEventListener('dragover', (e) => {
+                       // Check if the dragged data is from an existing block (needs try-catch potentially, but less reliable here)
+                       // For simplicity, just allow potential drops and verify in 'drop'
+                       // A better approach might involve checking e.dataTransfer.types but that can be complex.
+                       e.preventDefault(); // Allow drop
+                       e.dataTransfer.dropEffect = 'link'; // Indicate linking possibility
+                       block.style.outline = '2px dashed #16a085'; // Highlight potential target
+                  });
+                  block.addEventListener('dragleave', (e) => {
+                      block.style.outline = ''; // Remove highlight
+                  });
+
+                  block.addEventListener('drop', (e) => {
+                       e.preventDefault();
+                       e.stopPropagation(); // Prevent workspace drop handler
+                       block.style.outline = ''; // Remove highlight
+                       statusBar.textContent = 'Processing drop on block...';
+                       try {
+                           // Retrieve and parse the data set in 'dragstart'
+                           const dataString = e.dataTransfer.getData('text/plain');
+                           if (!dataString) return;
+
+                           const data = JSON.parse(dataString); // <<< THIS SHOULD NOW WORK
+
+                           if (data.isExistingBlock && data.id !== block.id) {
+                               // It's a valid drop from another existing block
+                               const sourceBlock = blocks.find(b => b.id === data.id);
+                               if (sourceBlock) {
+                                   addDependencyNote(sourceBlock, block);
+                                   statusBar.textContent = `Noted call from '${sourceBlock.dataset.name}' to '${block.dataset.name}'.`;
+                               }
+                           } else if (data.isPaletteItem) {
+                               // Dropped a new item from palette onto a block - ignore or handle differently?
+                                // console.log("Ignored palette item drop onto block.");
+                           } else {
+                                // console.log("Dropped item is not an existing block or is the same block.");
+                           }
+                       } catch (error) {
+                           console.error("Error processing drop on block:", error); // Log the actual error
+                           statusBar.textContent = 'Error on block drop. Check console.';
+                       } finally {
+                            // Reset status after a delay
+                             setTimeout(() => {
+                                 if (statusBar.textContent.startsWith('Noted call') || statusBar.textContent.startsWith('Error on block drop') || statusBar.textContent.startsWith('Processing drop')) {
+                                      statusBar.textContent = 'Ready';
+                                 }
+                            }, 1500);
+                       }
+                  });
+             } // End of setupBlockInteractions
+
+
+             function addDependencyNote(sourceBlock, targetBlock) {
+                  const callNote = `Calls: ${sourceBlock.dataset.name} (#${sourceBlock.id.split('-')[1]})`;
+                  let currentDesc = targetBlock.dataset.description || '';
+
+                  // Avoid adding duplicate notes
+                  if (!currentDesc.includes(callNote)) {
+                       targetBlock.dataset.description = currentDesc + (currentDesc ? '\n' : '') + callNote;
+                       targetBlock.querySelector('.block-description').innerHTML = targetBlock.dataset.description.replace(/\n/g, '<br>');
+                       // If the target block is selected, update the properties panel immediately
+                       if (selectedElement === targetBlock) {
+                           updateBlockPropertiesPanel(targetBlock);
+                       }
+                       updateConnectionsForBlock(targetBlock); // Update connections as description change might affect height
+                  }
+             }
+
+
+            function formatBlockType(type) {
+                return type.split('-').map(word =>
+                    word.charAt(0).toUpperCase() + word.slice(1)
+                ).join(' ');
+            }
+
+            function getDefaultDescription(type) {
+                // Descriptions moved to getTypeDescription for tooltip consistency
+                return getTypeDescription(type);
+            }
+
+            function getTypeDescription(type) {
+                switch(type) {
+                    case 'main-program': return 'Main program organization block (e.g., OB1) - Executes cyclically.';
+                    case 'function-block': return 'Function Block (FB) - Reusable code with persistent internal memory (Instance DB).';
+                    case 'function': return 'Function (FC) - Reusable code block without persistent memory.';
+                    case 'data-block': return 'Data Block (DB) - Storage for global or instance variables and parameters.';
+                    case 'interrupt': return 'Interrupt OB - Handles specific events (hardware, time, error) or time-based routines.';
+                    case 'hardware': return 'Physical hardware component representation (CPU, IO, HMI, etc.).';
+                    case 'sequence-control': return 'FB for managing sequential operations (e.g., state machine).';
+                    case 'motion-control': return 'FB/FC for controlling axes or motion profiles.';
+                    case 'process-control': return 'FB/FC for PID loops or other process regulation.';
+                    case 'alarm-handling': return 'FB/FC dedicated to processing and managing alarms.';
+                    case 'recipe-management': return 'FB/FC for handling product recipes or parameter sets.';
+                    case 'data-acquisition': return 'FB/FC for collecting and logging process data.';
+                    default: return 'Generic program component or hardware.';
+                }
+            }
+
+             function moveBlock(block, workspaceX, workspaceY) {
+                 block.style.left = `${workspaceX}px`;
+                 block.style.top = `${workspaceY}px`;
+                 updateConnectionsForBlock(block);
+                 updateMiniMap(); // Update minimap during drag
+             }
+
+             function deleteBlock(blockToDelete) {
+                 if (!blockToDelete || !blocks.includes(blockToDelete)) return;
+
+                 if (confirm(`Delete block '${blockToDelete.dataset.name}'? This will also remove its connections.`)) {
+                     // Remove connections associated with this block
+                     connections = connections.filter(conn => {
+                         if (conn.startBlock === blockToDelete || conn.endBlock === blockToDelete) {
+                             if (conn.lineElement) conn.lineElement.remove();
+                             if (conn.labelElement) conn.labelElement.remove();
+                             return false; // Remove connection from array
+                         }
+                         return true; // Keep connection
+                     });
+
+                     // Remove block from array and DOM
+                     blocks = blocks.filter(b => b !== blockToDelete);
+                     blockToDelete.remove();
+
+                     // Clear selection if this block was selected
+                     if (selectedElement === blockToDelete) {
+                         selectElement(null);
+                     }
+
+                     updateMiniMap();
+                      statusBar.textContent = `Block '${blockToDelete.dataset.name}' deleted.`;
+                 }
+             }
+
+             function updateBlockVisuals(block) {
+                 if (!block) return;
+                 block.querySelector('.block-title').textContent = block.dataset.name;
+                 block.querySelector('.block-description').innerHTML = block.dataset.description.replace(/\n/g, '<br>'); // Use innerHTML for <br>
+                 // Type doesn't usually change, but could be added if needed
+             }
+
+             function bringToFront(element) {
+                 if (!element) return;
+                 // Find the highest current z-index among blocks and zones
+                 const maxZ = Math.max(
+                     0, // Ensure at least 0
+                     ...blocks.map(b => parseInt(b.style.zIndex || 1)),
+                     ...zones.map(z => parseInt(z.style.zIndex || 0))
+                 );
+                 element.style.zIndex = maxZ + 1;
+             }
+
+             function sendToBack(element) {
+                 if (!element) return;
+                  // Find the lowest current z-index
+                 const minZ = Math.min(
+                     ...blocks.map(b => parseInt(b.style.zIndex || 1)),
+                     ...zones.map(z => parseInt(z.style.zIndex || 0))
+                 );
+                 // Set z-index lower, ensuring blocks stay above zones generally
+                 if (element.classList.contains('block')) {
+                      element.style.zIndex = Math.max(1, minZ - 1); // Blocks shouldn't go below 1 unless only zones exist
+                 } else if (element.classList.contains('zone')) {
+                      element.style.zIndex = Math.max(0, minZ - 1); // Zones can go to 0
+                 }
+                  // Simple approach: just set to 0 for zones, 1 for blocks
+                 // element.style.zIndex = element.classList.contains('zone') ? 0 : 1;
+             }
+
+
+            // --- Zone Management ---
+             function createNewZone(name, x, y, width, height, color, id = null, zIndex = 0) {
+                 const zoneId = id || `zone-${nextZoneId++}`;
+                 if (!id && zoneId.split('-')[1] >= nextZoneId) {
+                     nextZoneId = parseInt(zoneId.split('-')[1]) + 1;
+                 }
+
+                 const zoneData = {
+                     id: zoneId, name, x, y, width, height, color, zIndex
+                 };
+                 zones.push(zoneData);
+
+                 const zoneElement = createZoneElement(zoneData);
+                 backgroundZonesContainer.appendChild(zoneElement);
+                 setupZoneInteractions(zoneElement, zoneData);
+
+                 selectElement(zoneElement); // Select the newly created zone
+                 updateMiniMap();
+                 statusBar.textContent = `Zone '${name}' created.`;
+                 return zoneElement;
+             }
+
+             function createZoneElement(zoneData) {
+                 const zone = document.createElement('div');
+                 zone.className = 'zone';
+                 zone.id = zoneData.id;
+                 zone.style.left = `${zoneData.x}px`;
+                 zone.style.top = `${zoneData.y}px`;
+                 zone.style.width = `${zoneData.width}px`;
+                 zone.style.height = `${zoneData.height}px`;
+                 zone.style.backgroundColor = zoneData.color;
+                 zone.style.zIndex = zoneData.zIndex;
+
+                 // Add zone name display
+                 const nameLabel = document.createElement('div');
+                 nameLabel.className = 'zone-name';
+                 nameLabel.textContent = zoneData.name;
+                 zone.appendChild(nameLabel);
+
+                 // Add resize handles (initially hidden by CSS)
+                 ['nw', 'ne', 'sw', 'se', 'n', 's', 'w', 'e'].forEach(handleType => {
+                     const handle = document.createElement('div');
+                     handle.className = `zone-handle ${handleType}`;
+                     handle.dataset.type = handleType;
+                     zone.appendChild(handle);
+                 });
+
+                 return zone;
+             }
+
+             function setupZoneInteractions(zoneElement, zoneData) {
+                 if (zoneElement.dataset.listenerAttached) return;
+                 zoneElement.dataset.listenerAttached = 'true';
+
+                 // --- Mousedown on Zone Body (Dragging) or Handles (Resizing) ---
+                 zoneElement.addEventListener('mousedown', (e) => {
+                      // Prevent initiating drag/resize on right click
+                     if (e.button !== 0) return;
+
+                     e.stopPropagation(); // Prevent workspace click listener
+                     selectElement(zoneElement);
+
+                     if (e.target.classList.contains('zone-handle')) {
+                         // Start resizing
+                         startResizingZone(e, zoneElement, zoneData, e.target.dataset.type);
+                     } else if (e.target === zoneElement || e.target.classList.contains('zone-name')) {
+                          // Start dragging the zone
+                         startDragging(e, zoneElement);
+                     }
+                 });
+
+                 // --- Context Menu ---
+                 zoneElement.addEventListener('contextmenu', (e) => {
+                     e.preventDefault();
+                     e.stopPropagation();
+                     selectElement(zoneElement);
+                     showZoneContextMenu(e.clientX, e.clientY, zoneElement);
+                 });
+             }
+
+             function moveZone(zoneElement, zoneData, workspaceX, workspaceY) {
+                  zoneData.x = workspaceX;
+                  zoneData.y = workspaceY;
+                  zoneElement.style.left = `${workspaceX}px`;
+                  zoneElement.style.top = `${workspaceY}px`;
+                  updateMiniMap();
+             }
+
+              function resizeZone(zoneElement, zoneData, workspaceX, workspaceY, handleType) {
+                  const startX = interactionState.initialX;
+                  const startY = interactionState.initialY;
+                  const startW = interactionState.initialWidth;
+                  const startH = interactionState.initialHeight;
+
+                  let newX = zoneData.x, newY = zoneData.y, newW = zoneData.width, newH = zoneData.height;
+                  const dx = workspaceX - interactionState.startX; // Delta in workspace coords
+                  const dy = workspaceY - interactionState.startY;
+
+                  // Calculate new dimensions and positions based on handle type
+                  if (handleType.includes('e')) newW = Math.max(20, startW + dx);
+                  if (handleType.includes('w')) {
+                      newW = Math.max(20, startW - dx);
+                      newX = startX + dx;
+                  }
+                  if (handleType.includes('s')) newH = Math.max(20, startH + dy);
+                  if (handleType.includes('n')) {
+                      newH = Math.max(20, startH - dy);
+                      newY = startY + dy;
+                  }
+
+                   // Adjust position if width/height changed from west/north handles
+                  if (handleType.includes('w') && newW !== zoneData.width) {
+                     // No change needed here as newX is already calculated
+                  }
+                   if (handleType.includes('n') && newH !== zoneData.height) {
+                     // No change needed here as newY is already calculated
+                  }
+
+
+                  // Update data and element style
+                  zoneData.x = newX;
+                  zoneData.y = newY;
+                  zoneData.width = newW;
+                  zoneData.height = newH;
+
+                  zoneElement.style.left = `${newX}px`;
+                  zoneElement.style.top = `${newY}px`;
+                  zoneElement.style.width = `${newW}px`;
+                  zoneElement.style.height = `${newH}px`;
+
+                  updateMiniMap();
+              }
+
+
+             function updateZoneVisuals(zoneElement, zoneData) {
+                 if (!zoneElement || !zoneData) return;
+                 zoneElement.style.backgroundColor = zoneData.color;
+                 zoneElement.querySelector('.zone-name').textContent = zoneData.name;
+                 // Position/size/zindex updated directly during move/resize/layering
+             }
+
+             function deleteZone(zoneToDelete) {
+                  if (!zoneToDelete || !zones.some(z => z.id === zoneToDelete.id)) return;
+                  const zoneData = zones.find(z => z.id === zoneToDelete.id);
+
+                  if (confirm(`Delete zone '${zoneData.name}'?`)) {
+                      // Remove from array and DOM
+                      zones = zones.filter(z => z.id !== zoneToDelete.id);
+                      zoneToDelete.remove();
+
+                       // Clear selection if this zone was selected
+                       if (selectedElement === zoneToDelete) {
+                           selectElement(null);
+                       }
+
+                      updateMiniMap();
+                      statusBar.textContent = `Zone '${zoneData.name}' deleted.`;
+                  }
+             }
+
+
+             // --- Interaction State Management ---
+             function startDragging(event, element) {
+                 // This function now ONLY sets up the state for VISUAL dragging via mousemove
+                 // The actual data transfer is handled by the 'dragstart' listener on the element
+                 event.preventDefault();
+                 event.stopPropagation();
+
+                 const startCoords = screenToWorkspaceCoords(event.clientX, event.clientY);
+                 interactionState = {
+                     type: 'dragging',
+                     target: element,
+                     startX: startCoords.x, // Initial position in workspace coords
+                     startY: startCoords.y,
+                     initialX: parseFloat(element.style.left || 0), // Element's current pos
+                     initialY: parseFloat(element.style.top || 0),
+                     offsetX: 0, // Correction offset (usually 0 for blocks/zones)
+                     offsetY: 0,
+                 };
+
+                 // Update cursor for visual feedback
+                 if (element.classList.contains('block') || element.classList.contains('zone')) {
+                     element.style.cursor = 'grabbing';
+                 }
+                 // DO NOT set dataTransfer here - it happens in 'dragstart'
+             }
+
+
+              function startConnecting(event, portElement) {
+                  event.preventDefault();
+                  event.stopPropagation();
+
+                  interactionState = {
+                      type: 'connecting',
+                      target: portElement, // The starting port
+                      startX: event.clientX, // Screen coords for temp line
+                      startY: event.clientY,
+                  };
+                  tempConnectionLine.style.display = 'block';
+                  updateTempConnectionLine(event.clientX, event.clientY);
+                  workspace.style.cursor = 'crosshair';
+                  statusBar.textContent = 'Drag to a target port to connect.';
+              }
+
+              function startPanning(event) {
+                   event.preventDefault();
+                   event.stopPropagation();
+
+                   interactionState = {
+                       type: 'panning',
+                       target: workspace,
+                       startX: event.clientX, // Screen coords
+                       startY: event.clientY,
+                       initialX: offsetX, // Store initial workspace offset
+                       initialY: offsetY,
+                   };
+                   workspaceContainer.classList.add('panning'); // Style cursor
+                   workspace.style.cursor = 'grabbing';
+                    statusBar.textContent = 'Panning...';
+              }
+
+              function startResizingZone(event, zoneElement, zoneData, handleType) {
+                    event.preventDefault();
+                    event.stopPropagation();
+
+                    const startCoords = screenToWorkspaceCoords(event.clientX, event.clientY);
+                    interactionState = {
+                        type: 'resizing-zone',
+                        target: zoneElement,
+                        handle: handleType,
+                        startX: startCoords.x, // Workspace coords
+                        startY: startCoords.y,
+                        initialX: zoneData.x,
+                        initialY: zoneData.y,
+                        initialWidth: zoneData.width,
+                        initialHeight: zoneData.height,
+                    };
+                     statusBar.textContent = `Resizing zone '${zoneData.name}'...`;
+                    // Cursor style set by CSS on handles
+              }
+
+             function stopInteraction() {
+                 if (interactionState.type === 'connecting') {
+                     tempConnectionLine.style.display = 'none';
+                      workspace.style.cursor = 'grab'; // Reset cursor
+                 } else if (interactionState.type === 'dragging') {
+                     if (interactionState.target?.classList.contains('block') || interactionState.target?.classList.contains('zone')) {
+                          interactionState.target.style.cursor = 'move'; // Reset cursor
+                     }
+                      updateMiniMap(); // Ensure minimap is correct after drag end
+                 } else if (interactionState.type === 'panning') {
+                      workspaceContainer.classList.remove('panning');
+                      workspace.style.cursor = 'grab';
+                      updateMiniMap(); // Update minimap after panning stops
+                 } else if (interactionState.type === 'resizing-zone') {
+                     updateMiniMap();
+                 }
+
+                  // Reset status bar only if interaction was active and no specific message is pending
+                  if (interactionState.type && !statusBar.textContent.startsWith('Noted call') && !statusBar.textContent.startsWith('Connected')) {
+                       statusBar.textContent = 'Ready';
+                  }
+
+                 interactionState = { type: null, target: null }; // Reset state
+             }
+
+
+            // --- Global Event Handlers ---
+            function handleGlobalMouseMove(e) {
+                if (!interactionState.type) return; // No active interaction
+
+                e.preventDefault(); // Prevent text selection, etc.
+
+                const currentCoords = screenToWorkspaceCoords(e.clientX, e.clientY);
+
+                switch (interactionState.type) {
+                    case 'dragging':
+                        const dx = currentCoords.x - interactionState.startX;
+                        const dy = currentCoords.y - interactionState.startY;
+                        const newX = interactionState.initialX + dx;
+                        const newY = interactionState.initialY + dy;
+                         if (interactionState.target.classList.contains('block')) {
+                            moveBlock(interactionState.target, newX, newY);
+                         } else if (interactionState.target.classList.contains('zone')) {
+                              const zoneData = zones.find(z => z.id === interactionState.target.id);
+                              if(zoneData) moveZone(interactionState.target, zoneData, newX, newY);
+                         }
+                        break;
+
+                    case 'connecting':
+                        updateTempConnectionLine(e.clientX, e.clientY);
+                        break;
+
+                    case 'panning':
+                        const deltaX = e.clientX - interactionState.startX;
+                        const deltaY = e.clientY - interactionState.startY;
+                        offsetX = interactionState.initialX + deltaX;
+                        offsetY = interactionState.initialY + deltaY;
+                        updateTransform();
+                        break;
+
+                    case 'resizing-zone':
+                         const zoneData = zones.find(z => z.id === interactionState.target.id);
+                         if (zoneData) {
+                            resizeZone(interactionState.target, zoneData, currentCoords.x, currentCoords.y, interactionState.handle);
+                         }
+                         break;
+                }
+            }
+
+            function handleGlobalMouseUp(e) {
+                if (!interactionState.type) return;
+
+                 // Prevent default actions for the button used (e.g., middle button scrolling)
+                 if (interactionState.type === 'panning' && e.button === 1) {
+                    e.preventDefault();
+                 }
+
+                if (interactionState.type === 'connecting') {
+                    // Check if dropped onto a valid port
+                    const endPort = findPortAtScreenPoint(e.clientX, e.clientY);
+                    const startPort = interactionState.target;
+
+                    if (endPort && endPort !== startPort && endPort.closest('.block') !== startPort.closest('.block')) {
+                        createConnection(startPort, endPort);
+                         statusBar.textContent = `Connected ${startPort.closest('.block').dataset.name} to ${endPort.closest('.block').dataset.name}.`;
+                         setTimeout(() => { if (statusBar.textContent.startsWith('Connected')) statusBar.textContent = 'Ready'}, 2000); // Clear status after a delay
+                    } else {
+                         statusBar.textContent = 'Connection cancelled.';
+                         setTimeout(() => { if (statusBar.textContent === 'Connection cancelled.') statusBar.textContent = 'Ready'}, 1000);
+                    }
+                }
+
+                stopInteraction(); // Resets interactionState AFTER handling specific logic
+            }
+
+             function handleGlobalKeyDown(e) {
+                 // Handle Delete key for selected elements
+                 if ((e.key === 'Delete' || e.key === 'Backspace') && selectedElement) {
+                     // Avoid deleting if user is typing in an input/textarea
+                     const activeElement = document.activeElement;
+                     if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+                          return;
+                     }
+
+                     if (selectedElement.classList.contains('block')) {
+                         deleteBlock(selectedElement);
+                     } else if (selectedElement.classList.contains('zone')) {
+                         deleteZone(selectedElement);
+                     }
+                      hideContextMenu(); // Hide context menu if open
+                 }
+                  // Escape key to cancel interactions or deselect
+                 if (e.key === 'Escape') {
+                     if (interactionState.type === 'connecting' || interactionState.type === 'dragging' || interactionState.type === 'resizing-zone') {
+                         stopInteraction(); // Cancel active interaction
+                         // Optional: revert drag/resize? More complex.
+                     } else if (selectedElement) {
+                         selectElement(null); // Deselect if no interaction active
+                     }
+                      hideContextMenu();
+                 }
+             }
+
+              // Close context menu on clicking elsewhere
+             function handleGlobalClick(e) {
+                  if (!contextMenu.contains(e.target)) {
+                     hideContextMenu();
+                  }
+             }
+
+              // Update layout on window resize
+             function handleWindowResize() {
+                  updateTransform(); // Re-apply transform in case container size changed
+                  updateConnections(); // Redraw connections
+                  updateMiniMap(); // Update minimap view
+             }
+
+             // Helper to find a port element at screen coordinates
+             function findPortAtScreenPoint(screenX, screenY) {
+                  // Temporarily hide the temp line if it's visible, as it can interfere
+                  const tempLineWasVisible = tempConnectionLine.style.display === 'block';
+                  if (tempLineWasVisible) tempConnectionLine.style.display = 'none';
+
+                  const element = document.elementFromPoint(screenX, screenY);
+
+                   // Restore temp line if it was visible
+                  if (tempLineWasVisible) tempConnectionLine.style.display = 'block';
+
+                  if (element && element.classList.contains('port')) {
+                      return element;
+                  }
+                  return null;
+             }
+
+
+            // --- Connection Management ---
+            function createConnection(startPort, endPort) {
+                const startBlock = startPort.closest('.block');
+                const endBlock = endPort.closest('.block');
+
+                if (!startBlock || !endBlock || startBlock === endBlock) return; // Basic validation
+
+                // Prevent duplicate connections (check both directions if needed, simple check here)
+                const isDuplicate = connections.some(conn =>
+                    (conn.startPort === startPort && conn.endPort === endPort)
+                );
+                if (isDuplicate) {
+                    statusBar.textContent = 'Connection already exists.';
+                     setTimeout(() => { if (statusBar.textContent === 'Connection already exists.') statusBar.textContent = 'Ready'}, 1500);
+                    return;
+                }
+
+                 // Create SVG line element
+                 const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                 line.classList.add('connection-line');
+                 line.setAttribute('marker-end', 'url(#arrowhead)');
+                 connectionsSvg.appendChild(line);
+
+                 // Create label element (HTML positioned absolutely)
+                 const label = document.createElement('div');
+                 label.className = 'connection-label';
+                 label.textContent = 'Call/Data'; // Default label
+                 label.style.position = 'absolute'; // Position within workspace
+                 workspace.appendChild(label); // Append label to workspace for positioning
+
+                const connection = {
+                    id: `conn-${Date.now()}-${Math.random().toString(16).slice(2)}`, // Unique ID
+                    startBlock, endBlock, startPort, endPort,
+                    lineElement: line, // SVG line
+                    labelElement: label, // HTML label
+                    labelText: label.textContent
+                };
+                 connections.push(connection);
+
+                  // Make label editable on click
+                 label.addEventListener('click', (e) => {
+                     e.stopPropagation(); // Prevent selecting block/zone
+                     const newText = prompt('Enter connection type/description:', connection.labelText);
+                     if (newText !== null) {
+                         connection.labelText = newText;
+                         label.textContent = newText;
+                     }
+                 });
+
+                  // Context menu for connections (optional) - added simple delete
+                 const connectionContextMenuHandler = (e) => {
+                    e.preventDefault();
+                     if (confirm(`Delete connection between ${startBlock.dataset.name} and ${endBlock.dataset.name}?`)) {
+                         deleteConnection(connection);
+                     }
+                 };
+                 line.addEventListener('contextmenu', connectionContextMenuHandler);
+                 label.addEventListener('contextmenu', connectionContextMenuHandler);
+
+                 updateConnectionGeometry(connection); // Draw initial connection
+             }
+
+            function deleteConnection(connectionToDelete) {
+                connections = connections.filter(conn => conn !== connectionToDelete);
+                if (connectionToDelete.lineElement) connectionToDelete.lineElement.remove();
+                if (connectionToDelete.labelElement) connectionToDelete.labelElement.remove();
+                 statusBar.textContent = `Connection deleted.`;
+                 setTimeout(() => { if (statusBar.textContent === `Connection deleted.`) statusBar.textContent = 'Ready'}, 1500);
+            }
+
+             function updateConnections() {
+                 connections.forEach(updateConnectionGeometry);
+             }
+
+             function updateConnectionsForBlock(block) {
+                 connections.forEach(conn => {
+                     if (conn.startBlock === block || conn.endBlock === block) {
+                         updateConnectionGeometry(conn);
+                     }
+                 });
+             }
+
+            function updateConnectionGeometry(conn) {
+                if (!conn.startPort || !conn.endPort || !conn.lineElement || !conn.labelElement || !document.body.contains(conn.startPort) || !document.body.contains(conn.endPort)) {
+                    // If ports or elements don't exist (e.g., block deleted but connection not cleaned up yet), remove the connection remnant
+                     if (conn.lineElement) conn.lineElement.remove();
+                     if (conn.labelElement) conn.labelElement.remove();
+                     connections = connections.filter(c => c !== conn); // Remove from array
+                    return;
+                }
+                const startRect = conn.startPort.getBoundingClientRect();
+                const endRect = conn.endPort.getBoundingClientRect();
+                // const workspaceRect = workspace.getBoundingClientRect(); // Not needed for this calculation
+
+                // Calculate center points of ports in screen coordinates first
+                const startScreenX = startRect.left + startRect.width / 2;
+                const startScreenY = startRect.top + startRect.height / 2;
+                const endScreenX = endRect.left + endRect.width / 2;
+                const endScreenY = endRect.top + endRect.height / 2;
+
+                // Convert screen center to workspace coordinates for SVG/Label positioning
+                const startWorkspace = screenToWorkspaceCoords(startScreenX, startScreenY);
+                const endWorkspace = screenToWorkspaceCoords(endScreenX, endScreenY);
+
+                 // Update SVG line attributes
+                 conn.lineElement.setAttribute('x1', startWorkspace.x);
+                 conn.lineElement.setAttribute('y1', startWorkspace.y);
+                 conn.lineElement.setAttribute('x2', endWorkspace.x);
+                 conn.lineElement.setAttribute('y2', endWorkspace.y);
+
+                // Update HTML label position (midpoint in workspace coordinates)
+                const midX = (startWorkspace.x + endWorkspace.x) / 2;
+                const midY = (startWorkspace.y + endWorkspace.y) / 2;
+                conn.labelElement.style.left = `${midX}px`;
+                conn.labelElement.style.top = `${midY}px`;
+
+                 // Optional: Adjust label size based on zoom? Maybe too complex. Keeping fixed size for now.
+                 // conn.labelElement.style.fontSize = `${Math.max(6, 9 / scale)}px`;
+            }
+
+             // Updates the temporary line during connection drag
+             function updateTempConnectionLine(endScreenX, endScreenY) {
+                 const startScreenX = interactionState.startX;
+                 const startScreenY = interactionState.startY;
+
+                 const dx = endScreenX - startScreenX;
+                 const dy = endScreenY - startScreenY;
+                 const length = Math.sqrt(dx * dx + dy * dy);
+                 const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+
+                 tempConnectionLine.style.width = `${length}px`;
+                 tempConnectionLine.style.left = `${startScreenX}px`;
+                 tempConnectionLine.style.top = `${startScreenY}px`;
+                 tempConnectionLine.style.transform = `rotate(${angle}deg)`;
+             }
+
+
+            // --- Selection Management ---
+            function selectElement(element) {
+                // Deselect previous element
+                if (selectedElement && selectedElement !== element) {
+                    selectedElement.classList.remove('selected');
+                    // Hiding zone handles is done via CSS based on .selected class
+                }
+
+                selectedElement = element;
+
+                // Select new element
+                if (element) {
+                    element.classList.add('selected');
+                    // Bring selected element slightly forward visually (optional)
+                    // bringToFront(element); // Use context menu instead
+
+                    // Update properties panel based on type
+                    if (element.classList.contains('block')) {
+                         updateBlockPropertiesPanel(element);
+                    } else if (element.classList.contains('zone')) {
+                         const zoneData = zones.find(z => z.id === element.id);
+                         if(zoneData) updateZonePropertiesPanel(element, zoneData);
+                    }
+                     statusBar.textContent = `Selected ${element.classList.contains('block') ? 'Block' : 'Zone'} '${element.dataset?.name || element.querySelector?.('.zone-name')?.textContent || element.id}'.`;
+                } else {
+                    // No element selected, reset properties panel
+                    resetPropertiesPanel();
+                    // Reset status bar only if no other interaction message is present
+                    if (!statusBar.textContent.startsWith('Connected') && !statusBar.textContent.startsWith('Noted call')) {
+                       statusBar.textContent = 'Ready';
+                    }
+                }
+            }
+
+
+            // --- Properties Panel Management ---
+            function resetPropertiesPanel() {
+                elementPropertiesGroup.innerHTML = ''; // Clear dynamic content
+                elementPropertiesPlaceholder.style.display = 'block'; // Show placeholder
+                elementPropertiesPlaceholder.textContent = 'Select a Block or Zone to view its properties';
+            }
+
+            function updateBlockPropertiesPanel(block) {
+                elementPropertiesPlaceholder.style.display = 'none'; // Hide placeholder
+                elementPropertiesGroup.innerHTML = `
+                    <div class="property-label">Block Properties (ID: ${block.id})</div>
+                    <div style="margin-bottom: 8px;">
+                        <span class="property-label">Type:</span>
+                        <input type="text" class="property-input" value="${formatBlockType(block.dataset.type)}" readonly>
+                    </div>
+                    <div style="margin-bottom: 8px;">
+                        <span class="property-label">Name:</span>
+                        <input type="text" id="prop-block-name" class="property-input" value="${block.dataset.name}">
+                    </div>
+                    <div style="margin-bottom: 8px;">
+                        <span class="property-label">Description:</span>
+                        <textarea id="prop-block-description" class="property-textarea">${block.dataset.description}</textarea>
+                    </div>
+                `;
+
+                // Add type-specific fields
+                if (block.dataset.type === 'function-block' || block.dataset.type === 'function') {
+                    elementPropertiesGroup.innerHTML += `
+                        <div style="margin-bottom: 8px;">
+                            <span class="property-label">Parameters (In/Out/InOut):</span>
+                            <textarea id="prop-block-parameters" class="property-textarea">${block.dataset.parameters || ''}</textarea>
+                        </div>`;
+                }
+                if (block.dataset.type === 'data-block') {
+                    elementPropertiesGroup.innerHTML += `
+                        <div style="margin-bottom: 8px;">
+                            <span class="property-label">Variables / Structure:</span>
+                            <textarea id="prop-block-variables" class="property-textarea">${block.dataset.variables || ''}</textarea>
+                        </div>`;
+                }
+                if (block.dataset.type === 'hardware') {
+                    elementPropertiesGroup.innerHTML += `
+                        <div style="margin-bottom: 8px;">
+                            <span class="property-label">Model / Type:</span>
+                            <input type="text" id="prop-block-model" class="property-input" value="${block.dataset.model || ''}">
+                        </div>
+                        <div style="margin-bottom: 8px;">
+                            <span class="property-label">Address / ID / IP:</span>
+                            <input type="text" id="prop-block-address" class="property-input" value="${block.dataset.address || ''}">
+                        </div>`;
+                }
+
+                // Add action buttons
+                elementPropertiesGroup.innerHTML += `
+                    <div class="button-row">
+                        <button id="update-element-props" class="action-button">Update Block</button>
+                        <button id="delete-element" class="action-button danger-button">Delete Block</button>
+                    </div>`;
+
+                // Add event listeners for buttons
+                document.getElementById('update-element-props').addEventListener('click', () => updateSelectedBlockProperties(block));
+                document.getElementById('delete-element').addEventListener('click', () => deleteBlock(block));
+            }
+
+             function updateZonePropertiesPanel(zoneElement, zoneData) {
+                 elementPropertiesPlaceholder.style.display = 'none';
+                 elementPropertiesGroup.innerHTML = `
+                     <div class="property-label">Zone Properties (ID: ${zoneData.id})</div>
+                     <div style="margin-bottom: 8px;">
+                         <span class="property-label">Name:</span>
+                         <input type="text" id="prop-zone-name" class="property-input" value="${zoneData.name}">
+                     </div>
+                     <div style="margin-bottom: 8px;">
+                         <span class="property-label">Background Color:</span>
+                         <input type="color" id="prop-zone-color" class="property-color" value="${zoneData.color}">
+                     </div>
+                      <div class="button-row">
+                         <button id="update-element-props" class="action-button">Update Zone</button>
+                         <button id="delete-element" class="action-button danger-button">Delete Zone</button>
+                     </div>
+                 `;
+
+                  // Add event listeners for buttons
+                 document.getElementById('update-element-props').addEventListener('click', () => updateSelectedZoneProperties(zoneElement, zoneData));
+                 document.getElementById('delete-element').addEventListener('click', () => deleteZone(zoneElement));
+             }
+
+
+            function updateSelectedBlockProperties(block) {
+                 if (!block || !selectedElement || selectedElement !== block) return;
+
+                 block.dataset.name = document.getElementById('prop-block-name').value;
+                 block.dataset.description = document.getElementById('prop-block-description').value;
+
+                 // Update type-specific data
+                 const paramsInput = document.getElementById('prop-block-parameters');
+                 if (paramsInput) block.dataset.parameters = paramsInput.value;
+
+                 const varsInput = document.getElementById('prop-block-variables');
+                 if (varsInput) block.dataset.variables = varsInput.value;
+
+                 const modelInput = document.getElementById('prop-block-model');
+                 if (modelInput) block.dataset.model = modelInput.value;
+
+                 const addressInput = document.getElementById('prop-block-address');
+                 if (addressInput) block.dataset.address = addressInput.value;
+
+                 updateBlockVisuals(block);
+                 updateMiniMap(); // Name/description don't affect minimap visuals usually, but good practice
+                 statusBar.textContent = `Block '${block.dataset.name}' updated.`;
+                 updateConnectionsForBlock(block); // Update connections in case description change affects layout significantly
+            }
+
+             function updateSelectedZoneProperties(zoneElement, zoneData) {
+                 if (!zoneElement || !zoneData || !selectedElement || selectedElement !== zoneElement) return;
+
+                 zoneData.name = document.getElementById('prop-zone-name').value;
+                 zoneData.color = document.getElementById('prop-zone-color').value;
+
+                 updateZoneVisuals(zoneElement, zoneData);
+                 updateMiniMap();
+                 statusBar.textContent = `Zone '${zoneData.name}' updated.`;
+             }
+
+             // Update Project/PLC Info from Panel
+            function updateProjectData() {
+                projectData.name = document.getElementById('project-name').value;
+                projectData.author = document.getElementById('project-author').value;
+                projectData.date = document.getElementById('project-date').value;
+                projectData.description = document.getElementById('project-description').value;
+                 statusBar.textContent = 'Project information updated.';
+            }
+            function updatePlcData() {
+                projectData.plcType = document.getElementById('plc-type').value;
+                projectData.plcSoftware = document.getElementById('plc-software').value;
+                 statusBar.textContent = 'PLC information updated.';
+            }
+
+
+            // --- Zoom and Pan ---
+             function updateTransform() {
+                // Clamp scale
+                scale = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, scale));
+
+                // Apply transform to the workspace div
+                workspace.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
+
+                // Update related elements
+                updateConnections();
+                updateMiniMap(); // Update minimap viewport
+                 // Update status bar with zoom level, unless another message is active
+                 if (statusBar.textContent === 'Ready' || statusBar.textContent.startsWith('Zoom')) {
+                     statusBar.textContent = `Zoom: ${Math.round(scale * 100)}%`;
+                 }
+             }
+
+             function zoom(factor, centerX, centerY) {
+                const containerRect = workspaceContainer.getBoundingClientRect();
+                // If center point not specified, use container center
+                const pivotX = centerX ?? (containerRect.left + containerRect.width / 2);
+                const pivotY = centerY ?? (containerRect.top + containerRect.height / 2);
+
+                // Calculate workspace coordinates under the pivot point BEFORE zoom
+                const workspacePivotBefore = screenToWorkspaceCoords(pivotX, pivotY);
+
+                // Apply zoom factor
+                 const newScale = scale * factor;
+                 // Clamp scale
+                 scale = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newScale));
+
+
+                // Calculate where the workspace point should be AFTER zoom to stay under the pivot
+                // We adjust offsetX and offsetY to achieve this
+                offsetX = pivotX - containerRect.left - workspacePivotBefore.x * scale;
+                offsetY = pivotY - containerRect.top - workspacePivotBefore.y * scale;
+
+
+                updateTransform();
+            }
+
+             function handleWheelZoom(e) {
+                 e.preventDefault(); // Prevent page scroll
+                 const delta = e.deltaY;
+                 const zoomFactor = Math.exp(-delta * ZOOM_SENSITIVITY);
+                 zoom(zoomFactor, e.clientX, e.clientY); // Zoom towards mouse pointer
+             }
+
+
+             function resetView() {
+                 scale = 1.0;
+                 // Center the view (approximate) - or just reset offset
+                  offsetX = 0;
+                  offsetY = 0;
+                 // Optional: Try to center existing content if any
+                 /*
+                  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+                  const elements = [...blocks, ...zones.map(z => ({ ... }))]; // Simplified
+                  // ... calculate bounds ...
+                  if (hasContent) {
+                      const contentCenterX = (minX + maxX) / 2;
+                      const contentCenterY = (minY + maxY) / 2;
+                      offsetX = workspaceContainer.clientWidth / 2 - contentCenterX;
+                      offsetY = workspaceContainer.clientHeight / 2 - contentCenterY;
+                  }
+                  */
+
+                 updateTransform();
+                  statusBar.textContent = 'View reset (100%).';
+             }
+
+            // --- Mini-map Management ---
+             function toggleMiniMap() {
+                 const display = miniMap.style.display === 'none' ? 'block' : 'none';
+                 miniMap.style.display = display;
+                 if (display === 'block') {
+                     updateMiniMap();
+                 }
+             }
+
+            function updateMiniMap() {
+                if (miniMap.style.display === 'none') return;
+
+                miniMapContent.innerHTML = ''; // Clear previous content
+
+                // Calculate content bounds based on blocks and zones
+                let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+                let hasContent = false;
+
+                 const elements = [...blocks, ...zones.map(z => ({ // Create temporary objects for zones to access geometry
+                      id: z.id,
+                      style: { left: `${z.x}px`, top: `${z.y}px`, zIndex: z.zIndex },
+                      offsetWidth: z.width,
+                      offsetHeight: z.height,
+                      classList: { contains: (c) => c === 'zone' }, // Mock classList
+                      dataset: { name: z.name }, // Mock dataset
+                      color: z.color // Add color info
+                 }))];
+
+
+                elements.forEach(el => {
+                     if(!el || !el.style.left || !el.style.top) return; // Skip if element is invalid
+
+                    const x = parseFloat(el.style.left);
+                    const y = parseFloat(el.style.top);
+                    const width = el.offsetWidth || DEFAULT_ZONE_WIDTH; // Fallback for zones if needed
+                    const height = el.offsetHeight || DEFAULT_ZONE_HEIGHT;
+
+                    if (!isNaN(x) && !isNaN(y) && !isNaN(width) && !isNaN(height)) {
+                         minX = Math.min(minX, x);
+                         minY = Math.min(minY, y);
+                         maxX = Math.max(maxX, x + width);
+                         maxY = Math.max(maxY, y + height);
+                         hasContent = true;
+                    }
+                });
+
+                 // If no content, use default bounds based on viewport size
+                 if (!hasContent) {
+                     const vpWidth = workspaceContainer.clientWidth / scale;
+                     const vpHeight = workspaceContainer.clientHeight / scale;
+                     minX = -offsetX / scale;
+                     minY = -offsetY / scale;
+                     maxX = minX + vpWidth;
+                     maxY = minY + vpHeight;
+                 }
+
+                 // Add padding to bounds
+                 const padding = 50;
+                 minX -= padding;
+                 minY -= padding;
+                 maxX += padding;
+                 maxY += padding;
+
+                const contentWidth = Math.max(1, maxX - minX); // Avoid division by zero
+                const contentHeight = Math.max(1, maxY - minY);
+
+                // Calculate scale for mini-map content
+                 const mapScaleX = miniMap.clientWidth / contentWidth;
+                 const mapScaleY = miniMap.clientHeight / contentHeight;
+                 const mapScale = Math.min(mapScaleX, mapScaleY) * 0.95; // Add slight margin
+
+                 // Center the content in the minimap
+                 const mapContentWidthScaled = contentWidth * mapScale;
+                 const mapContentHeightScaled = contentHeight * mapScale;
+                 const mapOffsetX = (miniMap.clientWidth - mapContentWidthScaled) / 2;
+                 const mapOffsetY = (miniMap.clientHeight - mapContentHeightScaled) / 2;
+
+                 miniMapContent.style.transform = `translate(${mapOffsetX}px, ${mapOffsetY}px) scale(${mapScale})`;
+                 miniMapContent.style.width = `${contentWidth}px`; // Set size for correct scaling origin
+                 miniMapContent.style.height = `${contentHeight}px`;
+
+                 // Create mini representations (draw zones first, then blocks)
+                  zones.forEach(zoneData => {
+                      const miniZone = document.createElement('div');
+                      miniZone.className = 'mini-map-zone';
+                      miniZone.style.left = `${zoneData.x - minX}px`;
+                      miniZone.style.top = `${zoneData.y - minY}px`;
+                      miniZone.style.width = `${zoneData.width}px`;
+                      miniZone.style.height = `${zoneData.height}px`;
+                      miniZone.style.backgroundColor = zoneData.color;
+                      miniZone.style.zIndex = zoneData.zIndex; // Respect z-index
+                      miniMapContent.appendChild(miniZone);
+                  });
+
+                  blocks.forEach(block => {
+                      const miniBlock = document.createElement('div');
+                       miniBlock.className = 'mini-map-block';
+                       // Use computed style for background color to get the actual color
+                      const computedStyle = window.getComputedStyle(block);
+                       miniBlock.style.backgroundColor = computedStyle.backgroundColor;
+                       miniBlock.style.borderLeft = computedStyle.borderLeft; // Keep border indicator
+
+                      miniBlock.style.left = `${parseFloat(block.style.left) - minX}px`;
+                      miniBlock.style.top = `${parseFloat(block.style.top) - minY}px`;
+                      miniBlock.style.width = `${block.offsetWidth}px`;
+                      miniBlock.style.height = `${block.offsetHeight}px`;
+                      miniBlock.style.zIndex = block.style.zIndex || 1; // Respect z-index
+                      miniMapContent.appendChild(miniBlock);
+                  });
+
+
+                 // Update viewport indicator
+                 const viewportWorkspaceX = -offsetX / scale;
+                 const viewportWorkspaceY = -offsetY / scale;
+                 const viewportWorkspaceWidth = workspaceContainer.clientWidth / scale;
+                 const viewportWorkspaceHeight = workspaceContainer.clientHeight / scale;
+
+                 miniMapViewport.style.left = `${(viewportWorkspaceX - minX) * mapScale + mapOffsetX}px`;
+                 miniMapViewport.style.top = `${(viewportWorkspaceY - minY) * mapScale + mapOffsetY}px`;
+                 miniMapViewport.style.width = `${viewportWorkspaceWidth * mapScale}px`;
+                 miniMapViewport.style.height = `${viewportWorkspaceHeight * mapScale}px`;
+            }
+
+
+             // --- Notes Panel ---
+             function toggleNotesPanel() {
+                 const isOpen = notesPanel.style.display === 'flex';
+                 notesPanel.style.display = isOpen ? 'none' : 'flex'; // Use flex for layout
+                 if (!isOpen) {
+                     // Optional: Bring to front when opened
+                 }
+             }
+
+             function makeNotesPanelDraggable() {
+                 const titleBar = notesPanel.querySelector('.notes-title');
+                 let isDraggingNotes = false;
+                 let dragStartX, dragStartY, initialLeft, initialTop;
+
+                 titleBar.addEventListener('mousedown', (e) => {
+                     if (e.target === closeNotesBtn) return; // Don't drag if clicking close
+                     isDraggingNotes = true;
+                     dragStartX = e.clientX;
+                     dragStartY = e.clientY;
+                     const rect = notesPanel.getBoundingClientRect();
+                     initialLeft = rect.left;
+                     initialTop = rect.top;
+                     notesPanel.style.cursor = 'grabbing';
+                     titleBar.style.cursor = 'grabbing';
+                     e.preventDefault();
+                 });
+
+                 document.addEventListener('mousemove', (e) => {
+                     if (!isDraggingNotes) return;
+                     const dx = e.clientX - dragStartX;
+                     const dy = e.clientY - dragStartY;
+                     notesPanel.style.left = `${initialLeft + dx}px`;
+                     notesPanel.style.top = `${initialTop + dy}px`;
+                 });
+
+                 document.addEventListener('mouseup', () => {
+                     if (isDraggingNotes) {
+                         isDraggingNotes = false;
+                         notesPanel.style.cursor = 'default';
+                         titleBar.style.cursor = 'move';
+                     }
+                 });
+             }
+
+
+             // --- Tooltip Management ---
+             function showTooltip(element, text, event) {
+                 tooltip.textContent = text;
+                 tooltip.style.opacity = '1';
+
+                 // Position based on event or element, ensuring it stays within viewport
+                 const mouseX = event.clientX;
+                 const mouseY = event.clientY;
+
+
+                 // Position tooltip slightly offset from cursor
+                 let left = mouseX + 15;
+                 let top = mouseY + 15;
+
+                 // Use setTimeout to allow the browser to render the tooltip and calculate its size
+                 setTimeout(() => {
+                    if (tooltip.style.opacity === '1') { // Check if tooltip is still meant to be visible
+                         const tooltipRect = tooltip.getBoundingClientRect();
+
+                         // Adjust if tooltip goes off-screen right
+                         if (left + tooltipRect.width > window.innerWidth) {
+                             left = mouseX - tooltipRect.width - 15;
+                         }
+                         // Adjust if tooltip goes off-screen bottom
+                         if (top + tooltipRect.height > window.innerHeight) {
+                              top = mouseY - tooltipRect.height - 15;
+                         }
+                         // Adjust if tooltip goes off-screen left
+                          if (left < 0) {
+                              left = 5;
+                          }
+                         // Adjust if tooltip goes off-screen top
+                         if (top < 0) {
+                              top = 5;
+                         }
+
+                         tooltip.style.left = `${left}px`;
+                         tooltip.style.top = `${top}px`;
+                    }
+                 }, 0);
+             }
+
+             function hideTooltip() {
+                 tooltip.style.opacity = '0';
+                 // Optionally reset position far away to prevent ghosting on rapid moves
+                 tooltip.style.left = '-1000px';
+             }
+
+
+             // --- Context Menu Management ---
+             function showContextMenu(x, y, items) {
+                 contextMenu.innerHTML = ''; // Clear previous items
+                 items.forEach(item => {
+                     if (item === 'divider') {
+                         const divider = document.createElement('div');
+                         divider.className = 'context-menu-divider';
+                         contextMenu.appendChild(divider);
+                     } else {
+                         const menuItem = document.createElement('div');
+                         menuItem.className = 'context-menu-item';
+                         if (item.isDanger) {
+                              menuItem.classList.add('danger-button');
+                         }
+                         menuItem.textContent = item.label;
+                         menuItem.addEventListener('click', (e) => {
+                             e.stopPropagation(); // Prevent other click handlers
+                             item.action();
+                             hideContextMenu();
+                         });
+                         contextMenu.appendChild(menuItem);
+                     }
+                 });
+
+                 contextMenu.style.display = 'block';
+
+                 // Position menu, adjusting if it overflows viewport
+                 const menuRect = contextMenu.getBoundingClientRect();
+                 let left = x;
+                 let top = y;
+
+                 if (left + menuRect.width > window.innerWidth) {
+                     left = window.innerWidth - menuRect.width - 5; // Adjust left
+                 }
+                 if (top + menuRect.height > window.innerHeight) {
+                     top = window.innerHeight - menuRect.height - 5; // Adjust top
+                 }
+                  if (left < 0) left = 5;
+                  if (top < 0) top = 5;
+
+
+                 contextMenu.style.left = `${left}px`;
+                 contextMenu.style.top = `${top}px`;
+             }
+
+            function hideContextMenu() {
+                contextMenu.style.display = 'none';
+                lastContextMenuTarget = null;
+            }
+
+             function showBlockContextMenu(x, y, block) {
+                 lastContextMenuTarget = block; // Store the target
+                 const items = [
+                     { label: 'Rename', action: () => renameElement(block) },
+                     { label: 'Edit Description', action: () => editElementDescription(block) },
+                     'divider',
+                     { label: 'Bring to Front', action: () => bringToFront(block) },
+                     { label: 'Send to Back', action: () => sendToBack(block) },
+                     'divider',
+                     { label: 'Delete Block', action: () => deleteBlock(block), isDanger: true },
+                 ];
+                 showContextMenu(x, y, items);
+             }
+
+              function showZoneContextMenu(x, y, zoneElement) {
+                  lastContextMenuTarget = zoneElement;
+                  const zoneData = zones.find(z => z.id === zoneElement.id);
+                  if (!zoneData) return;
+
+                  const items = [
+                      { label: `Edit Zone '${zoneData.name}'...`, action: () => selectElement(zoneElement) }, // Just selects to show props
+                       'divider',
+                      { label: 'Bring to Front', action: () => bringToFront(zoneElement) },
+                      { label: 'Send to Back', action: () => sendToBack(zoneElement) },
+                       'divider',
+                      { label: 'Delete Zone', action: () => deleteZone(zoneElement), isDanger: true },
+                  ];
+                  showContextMenu(x, y, items);
+              }
+
+               function showWorkspaceContextMenu(x, y) {
+                   lastContextMenuTarget = workspace;
+                   const coords = screenToWorkspaceCoords(x, y);
+                   const items = [
+                        { label: 'Add Zone Here', action: () => createNewZone('New Zone', coords.x, coords.y, DEFAULT_ZONE_WIDTH, DEFAULT_ZONE_HEIGHT, DEFAULT_ZONE_COLOR) },
+                        'divider',
+                        { label: 'Reset View (100%)', action: resetView },
+                        { label: 'Clear Workspace...', action: () => { if(confirm('Clear entire workspace? Unsaved changes will be lost!')) clearWorkspace(); } , isDanger: true },
+                   ];
+                    showContextMenu(x, y, items);
+               }
+
+
+             // --- Context Menu Actions ---
+             function renameElement(element) {
+                 if (!element) return;
+                 let currentName = '';
+                 if (element.classList.contains('block')) {
+                     currentName = element.dataset.name;
+                 } else if (element.classList.contains('zone')) {
+                      const zoneData = zones.find(z => z.id === element.id);
+                      if(zoneData) currentName = zoneData.name;
+                 }
+
+                 const newName = prompt('Enter new name:', currentName);
+                 if (newName !== null && newName.trim() !== '') {
+                     const finalName = newName.trim();
+                     if (element.classList.contains('block')) {
+                         element.dataset.name = finalName;
+                         updateBlockVisuals(element);
+                         if(selectedElement === element) updateBlockPropertiesPanel(element); // Update props if selected
+                     } else if (element.classList.contains('zone')) {
+                         const zoneData = zones.find(z => z.id === element.id);
+                         if(zoneData) {
+                             zoneData.name = finalName;
+                             updateZoneVisuals(element, zoneData);
+                             if(selectedElement === element) updateZonePropertiesPanel(element, zoneData); // Update props if selected
+                         }
+                     }
+                      updateMiniMap();
+                      statusBar.textContent = `${element.classList.contains('block') ? 'Block' : 'Zone'} renamed to '${finalName}'.`;
+                 }
+             }
+
+             function editElementDescription(element) {
+                  if (!element || !element.classList.contains('block')) return; // Only blocks have descriptions here
+
+                  const currentDesc = element.dataset.description;
+                  // Using prompt for multiline is awkward. Consider a modal later.
+                  const newDesc = prompt('Enter new description:', currentDesc);
+
+                  if (newDesc !== null) { // Allow empty description
+                      element.dataset.description = newDesc;
+                      updateBlockVisuals(element);
+                       if (selectedElement === element) updateBlockPropertiesPanel(element); // Update props if selected
+                        statusBar.textContent = `Description updated for '${element.dataset.name}'.`;
+                         updateConnectionsForBlock(element); // In case height changes
+                  }
+             }
+
+            // --- Save/Load/Export ---
+            function saveDesign() {
+                updateProjectData(); // Ensure latest project data is captured
+                 updatePlcData();
+                 projectData.notes = projectNotes.value; // Capture notes
+
+                const design = {
+                    version: 2, // Increment version for new features
+                    projectInfo: projectData,
+                    viewState: { scale, offsetX, offsetY }, // Save view state
+                    blocks: blocks.map(block => ({
+                        id: block.id,
+                        type: block.dataset.type,
+                        name: block.dataset.name,
+                        description: block.dataset.description,
+                        x: parseFloat(block.style.left),
+                        y: parseFloat(block.style.top),
+                        zIndex: parseInt(block.style.zIndex || 1),
+                        // Save additional block data
+                        parameters: block.dataset.parameters,
+                        variables: block.dataset.variables,
+                        model: block.dataset.model,
+                        address: block.dataset.address,
+                    })),
+                     zones: zones.map(zoneData => ({ // Save zone data
+                         id: zoneData.id,
+                         name: zoneData.name,
+                         x: zoneData.x,
+                         y: zoneData.y,
+                         width: zoneData.width,
+                         height: zoneData.height,
+                         color: zoneData.color,
+                         zIndex: zoneData.zIndex
+                     })),
+                    connections: connections.map(conn => ({
+                        startBlockId: conn.startBlock.id,
+                        endBlockId: conn.endBlock.id,
+                        startPortType: conn.startPort.dataset.port, // 'in' or 'out'
+                        endPortType: conn.endPort.dataset.port,
+                        label: conn.labelText // Save label text
+                    })),
+                    nextBlockId,
+                    nextZoneId // Save next zone ID
+                };
+
+                const json = JSON.stringify(design, null, 2); // Pretty print JSON
+
+                // Option 1: Save to Local Storage (Convenient but limited) - Keep as fallback/optional?
+                /* try {
+                    localStorage.setItem('plcStructureDesign_v2', json);
+                     statusBar.textContent = 'Design saved to browser storage.';
+                } catch (e) {
+                     console.error("Error saving to localStorage:", e);
+                     statusBar.textContent = 'Error saving to browser storage (maybe full?). Try downloading.';
+                } */
+
+
+                // Option 2: Offer Download (Reliable) - Primary method
+                try {
+                    const blob = new Blob([json], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    // Sanitize project name for filename
+                    const filename = (projectData.name || 'plc_design').replace(/[^a-z0-9_.-]/gi, '_') + '.json';
+                    a.download = filename;
+                    document.body.appendChild(a); // Required for Firefox
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                     statusBar.textContent = 'Design download initiated.';
+                     setTimeout(() => { if (statusBar.textContent === 'Design download initiated.') statusBar.textContent = 'Ready'}, 2000);
+                } catch (e) {
+                     console.error("Error creating download link:", e);
+                     statusBar.textContent = 'Error creating download link. Check console.';
+                }
+            }
+
+            function promptLoadDesign() {
+                 if (!confirm('Load a design? Any unsaved changes will be lost.')) {
+                     return;
+                 }
+
+                 // Create a file input element
+                 const input = document.createElement('input');
+                 input.type = 'file';
+                 input.accept = '.json,application/json';
+
+                 input.onchange = (e) => {
+                     const file = e.target.files[0];
+                     if (file) {
+                         const reader = new FileReader();
+                         reader.onload = (event) => {
+                             try {
+                                 const json = event.target.result;
+                                 loadDesignFromJson(json);
+                             } catch (err) {
+                                 console.error('Error parsing loaded file:', err);
+                                 alert(`Error loading design: ${err.message}\n\nIs the file a valid JSON design file?`);
+                                  statusBar.textContent = 'Failed to load design. Invalid file?';
+                             }
+                         };
+                         reader.onerror = () => {
+                              alert('Error reading file.');
+                               statusBar.textContent = 'Error reading file.';
+                         }
+                         reader.readAsText(file);
+                     }
+                 };
+
+                 input.click(); // Trigger file selection dialog
+            }
+
+
+            function loadDesignFromJson(json) {
+                clearWorkspace(); // Start fresh
+
+                const design = JSON.parse(json);
+
+                // --- Load Project Info ---
+                if (design.projectInfo) {
+                    // Merge loaded data, keeping defaults only if property is missing in loaded data
+                    projectData = {
+                        name: design.projectInfo.name ?? 'New PLC Project',
+                        author: design.projectInfo.author ?? '',
+                        date: design.projectInfo.date ?? new Date().toISOString().split('T')[0],
+                        description: design.projectInfo.description ?? '',
+                        plcType: design.projectInfo.plcType ?? 'Siemens S7-1200',
+                        plcSoftware: design.projectInfo.plcSoftware ?? 'TIA Portal V18',
+                        notes: design.projectInfo.notes ?? ''
+                    };
+                    updateProjectInfoFields();
+                     updatePlcInfoFields();
+                     projectNotes.value = projectData.notes; // Load notes
+                }
+
+                 // --- Load View State ---
+                 if (design.viewState) {
+                     scale = design.viewState.scale || 1.0;
+                     offsetX = design.viewState.offsetX || 0;
+                     offsetY = design.viewState.offsetY || 0;
+                 } else {
+                      // If no view state saved, reset to default
+                     scale = 1.0;
+                     offsetX = 0;
+                     offsetY = 0;
+                 }
+                  updateTransform(); // Apply loaded/default transform immediately
+
+                  // --- Load Zones ---
+                 nextZoneId = 1; // Reset before loading
+                 if (design.zones && Array.isArray(design.zones)) {
+                     design.zones.forEach(zoneData => {
+                         // Validate essential data
+                         if (zoneData.id && zoneData.name != null && zoneData.x != null && zoneData.y != null && zoneData.width != null && zoneData.height != null && zoneData.color != null) {
+                             const zoneElement = createNewZone(
+                                 zoneData.name, zoneData.x, zoneData.y, zoneData.width, zoneData.height,
+                                 zoneData.color, zoneData.id, zoneData.zIndex || 0
+                             );
+                              // Update nextZoneId based on loaded IDs
+                              const idNum = parseInt(zoneData.id.split('-')[1]);
+                              if (!isNaN(idNum) && idNum >= nextZoneId) {
+                                  nextZoneId = idNum + 1;
+                              }
+                         } else {
+                             console.warn("Skipping invalid zone data:", zoneData);
+                         }
+                     });
+                 }
+                 // Use loaded nextZoneId or default if none were loaded
+                 nextZoneId = design.nextZoneId || nextZoneId;
+
+
+                // --- Load Blocks ---
+                 nextBlockId = 1; // Reset before loading
+                 if (design.blocks && Array.isArray(design.blocks)) {
+                     design.blocks.forEach(blockData => {
+                          // Validate essential data
+                          if (blockData.id && blockData.type && blockData.name != null && blockData.x != null && blockData.y != null) {
+                             const block = createNewBlock(
+                                 blockData.type, blockData.name, blockData.x, blockData.y, blockData.id,
+                                 blockData.description,
+                                 { // Pass additional data object
+                                      zIndex: blockData.zIndex,
+                                      parameters: blockData.parameters,
+                                      variables: blockData.variables,
+                                      model: blockData.model,
+                                      address: blockData.address
+                                 }
+                             );
+                              // Add draggable attribute for loaded blocks as well
+                             block.setAttribute('draggable', 'true'); // <<< Ensure loaded blocks are draggable
+                              // Update nextBlockId based on loaded IDs
+                              const idNum = parseInt(blockData.id.split('-')[1]);
+                              if (!isNaN(idNum) && idNum >= nextBlockId) {
+                                  nextBlockId = idNum + 1;
+                              }
+                          } else {
+                              console.warn("Skipping invalid block data:", blockData);
+                          }
+                     });
+                 }
+                  // Use loaded nextBlockId or default if none were loaded
+                  nextBlockId = design.nextBlockId || nextBlockId;
+
+
+                // --- Load Connections ---
+                 connections = []; // Clear any remnants
+                 connectionsSvg.innerHTML = `
+                      <defs>
+                         <marker id="arrowhead" markerWidth="10" markerHeight="7"
+                         refX="10" refY="3.5" orient="auto" markerUnits="strokeWidth">
+                           <polygon points="0 0, 10 3.5, 0 7" class="connection-arrow"/>
+                         </marker>
+                       </defs>`; // Clear SVG lines but keep defs
+                 workspace.querySelectorAll('.connection-label').forEach(l => l.remove()); // Remove old labels
+
+                if (design.connections && Array.isArray(design.connections)) {
+                    design.connections.forEach(connData => {
+                        const startBlock = blocks.find(b => b.id === connData.startBlockId);
+                        const endBlock = blocks.find(b => b.id === connData.endBlockId);
+
+                        if (startBlock && endBlock) {
+                            const startPort = startBlock.querySelector(`.port[data-port="${connData.startPortType}"]`);
+                            const endPort = endBlock.querySelector(`.port[data-port="${connData.endPortType}"]`);
+
+                            if (startPort && endPort) {
+                                // Recreate connection elements and object
+                                 const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                                 line.classList.add('connection-line');
+                                 line.setAttribute('marker-end', 'url(#arrowhead)');
+                                 connectionsSvg.appendChild(line);
+
+                                 const label = document.createElement('div');
+                                 label.className = 'connection-label';
+                                 label.textContent = connData.label || 'Call/Data'; // Use loaded label or default
+                                 label.style.position = 'absolute';
+                                 workspace.appendChild(label);
+
+                                const connection = {
+                                    id: `conn-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+                                    startBlock, endBlock, startPort, endPort,
+                                    lineElement: line,
+                                    labelElement: label,
+                                    labelText: label.textContent
+                                };
+                                connections.push(connection);
+
+                                 // Re-attach label editing listener
+                                 label.addEventListener('click', (e) => {
+                                     e.stopPropagation();
+                                     const newText = prompt('Enter connection type/description:', connection.labelText);
+                                     if (newText !== null) {
+                                         connection.labelText = newText;
+                                         label.textContent = newText;
+                                     }
+                                 });
+                                  // Re-attach context menu listener (optional) - simplified delete
+                                  const connectionContextMenuHandler = (e) => {
+                                     e.preventDefault();
+                                      if (confirm(`Delete connection between ${startBlock.dataset.name} and ${endBlock.dataset.name}?`)) {
+                                          deleteConnection(connection);
+                                      }
+                                  };
+                                 line.addEventListener('contextmenu', connectionContextMenuHandler);
+                                 label.addEventListener('contextmenu', connectionContextMenuHandler);
+
+
+                            } else {
+                                 console.warn(`Could not find ports for connection: ${connData.startBlockId} (${connData.startPortType}) -> ${connData.endBlockId} (${connData.endPortType})`);
+                            }
+                        } else {
+                             console.warn(`Could not find blocks for connection: ${connData.startBlockId} -> ${connData.endBlockId}`);
+                        }
+                    });
+                }
+
+                 selectElement(null); // Deselect everything after load
+                 updateConnections(); // Draw all loaded connections correctly
+                 updateMiniMap(); // Update minimap with loaded content
+                 statusBar.textContent = 'Design loaded successfully!';
+                 setTimeout(() => { if (statusBar.textContent === 'Design loaded successfully!') statusBar.textContent = 'Ready'}, 2000);
+            }
+
+
+             function clearWorkspace() {
+                 // Remove elements from DOM
+                 blocks.forEach(block => block.remove());
+                 zones.forEach(zoneData => {
+                     const el = document.getElementById(zoneData.id);
+                     if (el) el.remove();
+                 });
+                 connections.forEach(conn => {
+                     if (conn.lineElement) conn.lineElement.remove();
+                     if (conn.labelElement) conn.labelElement.remove();
+                 });
+                  connectionsSvg.innerHTML = `
+                      <defs>
+                         <marker id="arrowhead" markerWidth="10" markerHeight="7"
+                         refX="10" refY="3.5" orient="auto" markerUnits="strokeWidth">
+                           <polygon points="0 0, 10 3.5, 0 7" class="connection-arrow"/>
+                         </marker>
+                       </defs>`; // Keep defs
+
+
+                 // Clear state arrays
+                 blocks = [];
+                 connections = [];
+                 zones = [];
+
+                 // Reset counters and selection
+                 selectedElement = null;
+                 nextBlockId = 1;
+                 nextZoneId = 1;
+
+                 // Reset view
+                 resetView(); // Use resetView function
+
+                 // Reset project info to defaults
+                 projectData = {
+                     name: 'New PLC Project', author: '', date: new Date().toISOString().split('T')[0],
+                     description: '', plcType: 'Siemens S7-1200', plcSoftware: 'TIA Portal V18', notes: ''
+                 };
+                  updateProjectInfoFields();
+                  updatePlcInfoFields();
+                  projectNotes.value = ''; // Clear notes textarea
+
+                 resetPropertiesPanel();
+                 updateMiniMap();
+                  statusBar.textContent = 'Workspace cleared. Ready for new design.';
+             }
+
+             function exportDesignDocumentation() {
+                 updateProjectData(); // Ensure current data is used
+                  updatePlcData();
+                  projectData.notes = projectNotes.value; // Capture notes
+
+                 // Create a documentation object (more readable format)
+                 const doc = {
+                     projectInfo: {
+                         name: projectData.name,
+                         author: projectData.author,
+                         date: projectData.date,
+                         description: projectData.description,
+                     },
+                     plcInfo: {
+                         type: projectData.plcType,
+                         software: projectData.plcSoftware
+                     },
+                     programStructure: {
+                         blocks: blocks.map(block => ({
+                             id: block.id,
+                             type: formatBlockType(block.dataset.type),
+                             name: block.dataset.name,
+                             description: block.dataset.description,
+                             details: { // Group specific details
+                                 parameters: block.dataset.parameters || undefined, // Omit if empty
+                                 variables: block.dataset.variables || undefined,
+                                 model: block.dataset.model || undefined,
+                                 address: block.dataset.address || undefined
+                             }
+                         })).sort((a, b) => a.name.localeCompare(b.name)), // Sort blocks alphabetically by name
+                         connections: connections.map(conn => ({
+                             from: { id: conn.startBlock.id, name: conn.startBlock.dataset.name },
+                             to: { id: conn.endBlock.id, name: conn.endBlock.dataset.name },
+                             type: conn.labelText
+                         })).sort((a, b) => a.from.name.localeCompare(b.from.name)), // Sort connections by source block name
+                          zones: zones.map(zone => ({ // Include zones in export
+                              name: zone.name,
+                              id: zone.id,
+                              color: zone.color,
+                              // Note: position/size not typically needed in text doc
+                          })).sort((a, b) => a.name.localeCompare(b.name)) // Sort zones
+                     },
+                      projectNotes: projectData.notes || undefined // Omit if empty
+                 };
+
+                 // Generate formatted output (e.g., JSON or Markdown)
+                 // Option 1: JSON format
+                  const jsonOutput = JSON.stringify(doc, null, 2);
+                  downloadFile(jsonOutput, `${projectData.name.replace(/[^a-z0-9_.-]/gi, '_')}_documentation.json`, 'application/json');
+
+                 // Option 2: Markdown format (Example - uncomment to enable)
+                 /*
+                 let mdOutput = `# PLC Program Documentation: ${doc.projectInfo.name}\n\n`;
+                 mdOutput += `**Author:** ${doc.projectInfo.author || 'N/A'}  \n**Date:** ${doc.projectInfo.date || 'N/A'}\n\n`;
+                 mdOutput += `## Project Description\n${doc.projectInfo.description || 'No description provided.'}\n\n`;
+                 mdOutput += `## PLC Configuration\n- **Type:** ${doc.plcInfo.type}\n- **Software:** ${doc.plcInfo.software}\n\n`;
+                 if (doc.projectNotes) {
+                     mdOutput += `## Project Notes\n${doc.projectNotes}\n\n`;
+                 }
+                 mdOutput += `## Program Structure\n\n`;
+                 if(doc.programStructure.zones?.length) {
+                     mdOutput += `### Zones\n`;
+                     doc.programStructure.zones.forEach(zone => {
+                         mdOutput += `- ${zone.name} (${zone.id})\n`;
+                     });
+                     mdOutput += `\n`;
+                 }
+                 mdOutput += `### Blocks\n`;
+                 doc.programStructure.blocks.forEach(block => {
+                     mdOutput += `#### ${block.name} (${block.id}) - ${block.type}\n`;
+                     mdOutput += `> ${block.description || 'No description.'}\n`;
+                     if(block.details.parameters) mdOutput += `**Parameters:** \`\`\`\n${block.details.parameters}\n\`\`\`\n`;
+                     if(block.details.variables) mdOutput += `**Variables:** \`\`\`\n${block.details.variables}\n\`\`\`\n`;
+                     if(block.details.model) mdOutput += `**Model:** ${block.details.model}\n`;
+                     if(block.details.address) mdOutput += `**Address/ID:** ${block.details.address}\n`;
+                     mdOutput += `\n`;
+                 });
+                 mdOutput += `### Connections\n`;
+                 if (doc.programStructure.connections.length === 0) {
+                     mdOutput += `_No connections defined._\n`;
+                 } else {
+                     mdOutput += `| From Block | To Block | Type/Description |\n`;
+                     mdOutput += `|---|---|---|\n`;
+                     doc.programStructure.connections.forEach(conn => {
+                         mdOutput += `| ${conn.from.name} | ${conn.to.name} | ${conn.type} |\n`;
+                     });
+                 }
+                 downloadFile(mdOutput, `${projectData.name.replace(/[^a-z0-9_.-]/gi, '_')}_documentation.md`, 'text/markdown');
+                 */
+
+                 statusBar.textContent = 'Documentation export initiated.';
+                 setTimeout(() => { if (statusBar.textContent === 'Documentation export initiated.') statusBar.textContent = 'Ready'}, 2000);
+            }
+
+            // Helper function for downloading generated files
+            function downloadFile(content, filename, contentType) {
+                 try {
+                     const blob = new Blob([content], { type: contentType });
+                     const url = URL.createObjectURL(blob);
+                     const a = document.createElement('a');
+                     a.href = url;
+                     a.download = filename;
+                     document.body.appendChild(a);
+                     a.click();
+                     document.body.removeChild(a);
+                     URL.revokeObjectURL(url);
+                 } catch (e) {
+                      console.error("Error creating download:", e);
+                       statusBar.textContent = 'Error creating download. Check console.';
+                      alert("Could not initiate download. See console for details.");
+                 }
+            }
+
+
+            // --- Help Function ---
+            function showHelp() {
+                 alert(
+                     'PLC Program Structure Designer Help:\n\n' +
+                     '--- Basic Usage ---\n' +
+                     '- Drag blocks from the sidebar onto the workspace.\n' +
+                     '- Drag zones using the "Add Zone" button.\n' +
+                     '- Click elements (blocks/zones) to select them and view/edit properties in the right panel.\n' +
+                     '- Drag a block\'s title bar or a zone\'s body to move it.\n' +
+                     '- Drag from one block\'s port (circle) to another to create a connection line.\n' +
+                     '- Click a connection label to edit its description.\n' +
+                     '- Right-click on blocks, zones, or empty space for context menus.\n\n' +
+                     '--- Navigation ---\n' +
+                     '- Pan (move the view): Hold Alt + Drag Left Mouse Button OR Drag Middle Mouse Button.\n' +
+                     '- Zoom: Use the Mouse Wheel or the +/- buttons.\n' +
+                     '- Reset View: Click the "1:1" button.\n' +
+                     '- Mini-map: Toggle with the "Mini-map" button for an overview.\n\n' +
+                     '--- Zones ---\n' +
+                     '- Use zones to visually group related blocks.\n' +
+                     '- Resize selected zones using the handles on their borders.\n' +
+                     '- Edit zone name and color in the Properties panel.\n\n' +
+                     '--- Other Features ---\n' +
+                     '- Dependency Links: Drag an existing block onto another block to add a "Calls: ..." note to the target\'s description.\n' +
+                     '- Palette Edit: Double-click a sidebar item to rename it for the current session.\n' +
+                     '- Project Notes: Use the toggle button to open/close a scratchpad.\n' +
+                     '- Save/Load: Use buttons to save your design (downloads a .json file) or load a previous one.\n' +
+                     '- Export: Creates a JSON documentation file summarizing the structure.\n' +
+                     '- Delete: Press Delete/Backspace when an element is selected, or use context menus/property panel buttons.'
+                 );
+             }
+
+
+            // --- Run Initialization ---
+            initializeApp();
+
+        }); // End DOMContentLoaded
+        } catch (error) {
+             console.error("A critical error occurred during initialization:", error);
+             alert("A critical error occurred. The application might not work correctly. Please check the console (F12) for details.");
+             // Display error message to user prominently
+             const errorDiv = document.createElement('div');
+             errorDiv.style.position = 'fixed';
+             errorDiv.style.top = '0';
+             errorDiv.style.left = '0';
+             errorDiv.style.width = '100%';
+             errorDiv.style.backgroundColor = 'red';
+             errorDiv.style.color = 'white';
+             errorDiv.style.padding = '10px';
+             errorDiv.style.textAlign = 'center';
+             errorDiv.style.zIndex = '9999';
+             errorDiv.textContent = `Application Error: ${error.message}. Check console (F12).`;
+             document.body.prepend(errorDiv);
+        }
+    </script>
+</body>
+</html>

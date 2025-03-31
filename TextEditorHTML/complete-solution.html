@@ -1,0 +1,1489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hierarchical List Visualizer</title>
+  
+  <!-- ECharts Library -->
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+  
+  <!-- CodeMirror Library and Dependencies -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/mode/simple.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/edit/closebrackets.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/addon/selection/active-line.min.js"></script>
+  
+  <style>
+    /* === Variables & Base Styles === */
+    :root {
+      /* Colors */
+      --primary: #4361ee;
+      --primary-light: #eef2ff;
+      --primary-dark: #3a56d4;
+      --secondary: #3f37c9;
+      --bg-light: #f8f9fa;
+      --text-dark: #212529;
+      --border: #dee2e6;
+      --success: #28a745;
+      --error: #dc3545;
+      --warning: #ffc107;
+      
+      /* Spacing */
+      --spacing-xs: 5px;
+      --spacing-sm: 10px;
+      --spacing-md: 15px;
+      --spacing-lg: 20px;
+      --spacing-xl: 25px;
+    }
+    
+    body {
+      margin: 0;
+      background-color: var(--bg-light);
+      color: var(--text-dark);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+    }
+    
+    /* === Layout Components === */
+    .app-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: var(--spacing-lg);
+    }
+    
+    .main-content {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: var(--spacing-xl);
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    
+    @media (max-width: 1000px) {
+      .main-content {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    /* === Utility Classes === */
+    .card {
+      background-color: #fff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    
+    .btn {
+      padding: var(--spacing-sm) 18px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    
+    .btn-primary {
+      background-color: var(--primary);
+      color: #fff;
+      border: none;
+      box-shadow: 0 2px 5px rgba(67, 97, 238, 0.3);
+    }
+    
+    .btn-primary:hover {
+      background-color: var(--primary-dark);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(67, 97, 238, 0.4);
+    }
+    
+    .btn-outline {
+      background-color: #fff;
+      color: var(--primary);
+      border: 1px solid var(--primary);
+    }
+    
+    .btn-outline:hover {
+      background-color: var(--primary-light);
+      transform: translateY(-2px);
+      box-shadow: 0 2px 5px rgba(67, 97, 238, 0.2);
+    }
+    
+    .btn-outline.active {
+      background-color: var(--primary);
+      color: #fff;
+      box-shadow: 0 2px 5px rgba(67, 97, 238, 0.3);
+    }
+    
+    /* === Header Styles === */
+    header {
+      text-align: center;
+      margin-bottom: 30px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    h1 {
+      color: var(--primary);
+      margin-bottom: var(--spacing-sm);
+      font-weight: 700;
+    }
+    
+    .subtitle {
+      font-size: 1.2rem;
+      color: #666;
+      margin-bottom: var(--spacing-lg);
+    }
+    
+    /* === Editor Section === */
+    .editor-section {
+      padding: var(--spacing-xl);
+      border-right: 1px solid var(--border);
+      background-color: #fff;
+    }
+    
+    .editor-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--spacing-lg);
+    }
+    
+    .editor-title {
+      font-size: 1.3rem;
+      font-weight: 600;
+      color: var(--primary);
+    }
+    
+    .editor-actions {
+      display: flex;
+      gap: var(--spacing-sm);
+    }
+    
+    .editor-container {
+      position: relative;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+      height: 400px;
+    }
+    
+    /* === CodeMirror Custom Styling === */
+    .CodeMirror {
+      height: 100%;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    
+    /* Custom styling for list levels - matches chart colors */
+    .cm-level-0 { color: #5470c6 !important; font-weight: bold; }
+    .cm-level-1 { color: #91cc75 !important; }
+    .cm-level-2 { color: #fac858 !important; }
+    .cm-level-3 { color: #ee6666 !important; }
+    .cm-level-4 { color: #73c0de !important; }
+    .cm-level-5 { color: #3ba272 !important; }
+    .cm-level-6 { color: #fc8452 !important; }
+    .cm-level-7 { color: #9a60b4 !important; }
+    
+    /* Style the tab character so tab indentation is visible */
+    .cm-tab {
+      display: inline-block;
+      border-left: 1px solid rgba(0,0,0,0.1);
+      margin-left: 1px;
+    }
+    
+    /* === Visualization Section === */
+    .visualization-section {
+      padding: var(--spacing-xl);
+      background-color: #fff;
+    }
+    
+    .diagram-selector {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: var(--spacing-xl);
+    }
+    
+    .chart-container {
+      width: 100%;
+      height: 600px;
+      position: relative;
+    }
+    
+    .diagram-container {
+      min-height: 500px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    
+    .diagram-header {
+      padding: 15px var(--spacing-lg);
+      background-color: var(--primary-light);
+      border-bottom: 1px solid var(--border);
+      font-weight: 600;
+      color: var(--primary);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .diagram-description {
+      font-size: 0.9rem;
+      color: #666;
+      margin-top: var(--spacing-xs);
+      font-weight: normal;
+    }
+    
+    .node-stats {
+      background-color: rgba(255, 255, 255, 0.8);
+      padding: var(--spacing-xs) var(--spacing-sm);
+      border-radius: 4px;
+      font-size: 0.85rem;
+      color: #555;
+    }
+    
+    .diagram-content {
+      flex: 1;
+      padding: var(--spacing-lg);
+      overflow: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #fafafa;
+      position: relative;
+    }
+    
+    /* === Notification Component === */
+    .notification {
+      position: fixed;
+      top: var(--spacing-lg);
+      right: var(--spacing-lg);
+      padding: 15px var(--spacing-lg);
+      background-color: #fff;
+      border-left: 4px solid var(--primary);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+      border-radius: 5px;
+      z-index: 1000;
+      transition: transform 0.3s, opacity 0.3s;
+      transform: translateX(120%);
+      opacity: 0;
+      max-width: 400px;
+    }
+    
+    .notification.show {
+      transform: translateX(0);
+      opacity: 1;
+    }
+    
+    .notification.error {
+      border-left-color: var(--error);
+    }
+    
+    .notification.warning {
+      border-left-color: var(--warning);
+    }
+    
+    .notification.success {
+      border-left-color: var(--success);
+    }
+    
+    /* === Instructions Panel === */
+    .instructions {
+      margin-top: var(--spacing-xl);
+      padding: var(--spacing-lg);
+      background-color: var(--primary-light);
+      border-radius: 8px;
+      font-size: 0.95rem;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+    
+    .instructions h3 {
+      margin-top: 0;
+      color: var(--primary);
+      font-weight: 600;
+    }
+    
+    .instructions code {
+      background: rgba(255,255,255,0.7);
+      padding: 2px 4px;
+      border-radius: 3px;
+      font-family: 'Consolas', 'Monaco', monospace;
+    }
+    
+    .instructions .color-sample {
+      display: block;
+      padding: var(--spacing-xs) var(--spacing-sm);
+      margin: var(--spacing-xs) 0;
+      border-radius: 4px;
+    }
+    
+    .level-0-sample { background-color: rgba(84, 112, 198, 0.1); color: #5470c6; }
+    .level-1-sample { background-color: rgba(145, 204, 117, 0.1); color: #91cc75; margin-left: 15px; }
+    .level-2-sample { background-color: rgba(250, 200, 88, 0.1); color: #fac858; margin-left: 30px; }
+    .level-3-sample { background-color: rgba(238, 102, 102, 0.1); color: #ee6666; margin-left: 45px; }
+    
+    .error-message {
+      padding: var(--spacing-lg);
+      text-align: center;
+      color: var(--error);
+      background-color: #f8d7da;
+      border-radius: 8px;
+      margin-top: var(--spacing-lg);
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <header>
+      <h1>Hierarchical List Visualizer</h1>
+      <div class="subtitle">Create multilevel hierarchies with simple indentation</div>
+    </header>
+
+    <div class="main-content">
+      <!-- Editor Section -->
+      <section class="editor-section">
+        <div class="editor-header">
+          <div class="editor-title">Hierarchical Editor</div>
+          <div class="editor-actions">
+            <button id="generate-btn" class="btn btn-primary">Generate Diagram</button>
+          </div>
+        </div>
+        <div class="editor-container card">
+          <!-- CodeMirror will replace this element -->
+          <textarea id="list-editor" placeholder="Enter your hierarchical list here...">Project Planning
+	Requirements Analysis
+		Stakeholder Interviews
+			Executive Team
+			End Users
+			Technical Staff
+		Document Requirements
+		Validate Requirements
+	Design Phase
+		System Architecture
+		User Interface Design
+		Database Schema
+	Implementation
+		Frontend Development
+		Backend Development
+		Database Setup
+	Testing
+		Unit Testing
+		Integration Testing
+		User Acceptance Testing
+	Deployment
+		Server Setup
+		Data Migration
+		Go-Live
+	Maintenance
+		Bug Fixes
+		Performance Optimization
+		Feature Updates</textarea>
+        </div>
+        <div class="instructions">
+          <h3>How to Use:</h3>
+          <p>Enter your hierarchical list with automatic color-coding by indentation level:</p>
+          
+          <div class="color-sample level-0-sample">Root level (no indentation)</div>
+          <div class="color-sample level-1-sample">First level (single tab indentation)</div>
+          <div class="color-sample level-2-sample">Second level (two tabs indentation)</div>
+          <div class="color-sample level-3-sample">Third level (three tabs indentation)</div>
+          
+          <p><strong>Pro tip:</strong> Press Tab to indent and Shift+Tab to outdent lines. Colors match the visualization.</p>
+        </div>
+      </section>
+
+      <!-- Visualization Section -->
+      <section class="visualization-section">
+        <div class="diagram-selector">
+          <button class="diagram-button btn btn-outline active" data-diagram="tree">Tree Diagram</button>
+          <button class="diagram-button btn btn-outline" data-diagram="mindmap">Mind Map</button>
+          <button class="diagram-button btn btn-outline" data-diagram="force">Force Graph</button>
+          <button class="diagram-button btn btn-outline" data-diagram="sankey">Sankey Diagram</button>
+        </div>
+        <div class="diagram-container card">
+          <div class="diagram-header">
+            <div>
+              <div id="diagram-title">Tree Diagram</div>
+              <div id="diagram-description" class="diagram-description">
+                A traditional hierarchical visualization showing parent-child relationships
+              </div>
+            </div>
+            <div class="node-stats">
+              <span id="visible-nodes">0</span> nodes displayed
+              (<span id="total-nodes">0</span> total)
+            </div>
+          </div>
+          <div class="diagram-content">
+            <div id="chart" class="chart-container"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div id="notification" class="notification">Notification message</div><script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // === Constants ===
+      const DEBOUNCE_DELAY = 1000; // ms to wait after typing before auto-regenerating
+      const ANIMATION_DURATION = 600; // ms for chart animations
+      
+      // === Application State ===
+      const state = {
+        currentDiagram: 'tree',
+        lastInputText: '',
+        currentTreeData: null,
+        parsedData: null,
+        chart: null,
+        nodeById: new Map(),
+        collapsed: new Set(),
+        maxDepth: 0,
+        totalNodes: 0,
+        visibleNodes: 0,
+        chartInitialized: false,
+        notificationTimeout: null
+      };
+      
+      // === Diagram Configuration ===
+      const diagramInfo = {
+        tree: {
+          title: 'Tree Diagram',
+          description: 'A traditional hierarchical visualization with adaptive spacing and curved links'
+        },
+        mindmap: {
+          title: 'Mind Map',
+          description: 'A radial diagram with optimized node placement and adaptive spacing'
+        },
+        force: {
+          title: 'Force Graph',
+          description: 'An interactive network visualization showing hierarchical relationships'
+        },
+        sankey: {
+          title: 'Sankey Diagram',
+          description: 'A flow diagram showing hierarchical relationships with clear level separation'
+        }
+      };
+      
+      // Color palettes - consistent between editor and visualizations
+      // Note: These colors should match the .cm-level-X CSS classes
+      const colorPalettes = {
+        tree: ['#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de', '#3ba272', '#fc8452', '#9a60b4'],
+        mindmap: ['#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de', '#3ba272', '#fc8452', '#9a60b4'],
+        force: ['#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de', '#3ba272', '#fc8452', '#9a60b4'],
+        sankey: ['#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de', '#3ba272', '#fc8452', '#9a60b4']
+      };
+      
+      // === Utility Functions ===
+      
+      // Get DOM element by ID with error handling
+      const getElement = (id) => {
+        const element = document.getElementById(id);
+        if (!element) {
+          console.error('Element with ID "' + id + '" not found in the DOM');
+        }
+        return element;
+      };
+      
+      // Generic debounce function
+      const debounce = (fn, delay) => {
+        let timer = null;
+        return function(...args) {
+          clearTimeout(timer);
+          timer = setTimeout(() => fn.apply(this, args), delay);
+        };
+      };
+      
+      // Show notifications to the user
+      const showNotification = (message, type = "") => {
+        const notification = getElement('notification');
+        if (!notification) {
+          console.log(type + ": " + message);
+          return;
+        }
+        
+        if (state.notificationTimeout) {
+          clearTimeout(state.notificationTimeout);
+          state.notificationTimeout = null;
+        }
+        
+        notification.textContent = message;
+        notification.className = 'notification';
+        if (type === "error") {
+          notification.classList.add('error');
+        } else if (type === "warning") {
+          notification.classList.add('warning');
+        } else if (type === "success") {
+          notification.classList.add('success');
+        }
+        
+        notification.classList.add('show');
+        state.notificationTimeout = setTimeout(() => {
+          notification.classList.remove('show');
+          state.notificationTimeout = null;
+        }, 3000);
+      };
+      
+      // === Setup Libraries ===
+      
+      // Check if required libraries are loaded
+      if (typeof echarts === 'undefined' || typeof CodeMirror === 'undefined') {
+        const diagramContent = document.querySelector('.diagram-content');
+        if (diagramContent) {
+          diagramContent.innerHTML = `
+            <div class="error-message">
+              <h3>Error: Required Libraries Not Available</h3>
+              <p>The ECharts or CodeMirror libraries could not be loaded. This application requires internet connectivity.</p>
+              <p>Please check your internet connection and refresh the page.</p>
+            </div>`;
+        }
+        return; // Exit early if dependencies aren't available
+      }
+      
+      // Define custom mode for indentation-based hierarchy
+      CodeMirror.defineMode("indentationmode", function() {
+        return {
+          token: function(stream, state) {
+            // Count tabs at the beginning of the line
+            let tabCount = 0;
+            
+            // If we're at the beginning of a line, count the tabs
+            if (stream.sol()) {
+              while (stream.eat('\t')) {
+                tabCount++;
+              }
+              state.indentation = tabCount;
+            } else {
+              tabCount = state.indentation || 0;
+            }
+            
+            // Consume the rest of the line
+            stream.skipToEnd();
+            
+            // Return token based on indentation level (capped at 7)
+            return "level-" + Math.min(tabCount, 7);
+          },
+          
+          startState: function() {
+            return { indentation: 0 };
+          }
+        };
+      });
+      
+      // === DOM Elements ===
+      const editorTextarea = getElement('list-editor');
+      const generateBtn = getElement('generate-btn');
+      const chartContainer = getElement('chart');
+      const diagramTitle = getElement('diagram-title');
+      const diagramDescription = getElement('diagram-description');
+      const visibleNodesCounter = getElement('visible-nodes');
+      const totalNodesCounter = getElement('total-nodes');
+      const diagramButtons = document.querySelectorAll('.diagram-button');
+      
+      // === Editor Setup ===
+      const editor = CodeMirror.fromTextArea(editorTextarea, {
+        mode: "indentationmode",
+        lineWrapping: true,
+        lineNumbers: false,
+        styleActiveLine: true,
+        autoCloseBrackets: true,
+        indentUnit: 1,
+        indentWithTabs: true,
+        tabSize: 4,
+        viewportMargin: Infinity,
+        extraKeys: {
+          "Tab": function(cm) {
+            // Insert a tab at cursor position
+            cm.replaceSelection("\t");
+          },
+          "Shift-Tab": function(cm) {
+            // Handle outdenting (remove one tab from line beginning)
+            const cursor = cm.getCursor();
+            const line = cm.getLine(cursor.line);
+            if (line.charAt(0) === '\t') {
+              cm.replaceRange("", {line: cursor.line, ch: 0}, {line: cursor.line, ch: 1});
+            }
+          }
+        }
+      });
+      
+      // === Data Model/Parsing ===
+      
+      // Parse the text from the editor into a hierarchical data structure
+      const parseList = (text) => {
+        const lines = text.split('\n').filter(line => line.trim() !== '');
+        if (lines.length === 0) {
+          return { name: 'Empty List', children: [] };
+        }
+        
+        // Create root node
+        const root = { 
+          name: lines[0].trim(), 
+          children: [],
+          id: 'node-0',
+          depth: 0,
+          value: 10, // Base value for sizing calculations
+          collapsed: false
+        };
+        
+        let nodeCounter = 1;
+        state.totalNodes = 1;
+        const stack = [{ node: root, depth: 0 }];
+        state.nodeById = new Map();
+        state.nodeById.set(root.id, root);
+        state.maxDepth = 0;
+        
+        // Process each line after the root node
+        for (let i = 1; i < lines.length; i++) {
+          const line = lines[i];
+          
+          // Count leading tabs to determine depth level
+          let depth = 0;
+          for (let j = 0; j < line.length; j++) {
+            if (line[j] === '\t') {
+              depth++;
+            } else {
+              break;
+            }
+          }
+          
+          // Get the actual content without tabs
+          const content = line.substring(depth).trim();
+          const nodeId = `node-${nodeCounter++}`;
+          
+          state.maxDepth = Math.max(state.maxDepth, depth);
+          state.totalNodes++;
+          
+          // Create new node with enhanced properties
+          const newNode = { 
+            name: content, 
+            children: [],
+            id: nodeId,
+            depth: depth,
+            value: 10 - depth, // Decreasing value by depth for visualization scaling
+            collapsed: state.collapsed.has(nodeId) // Directly incorporate collapse state
+          };
+          
+          state.nodeById.set(nodeId, newNode);
+          
+          // Find the correct parent node based on indentation
+          while (stack.length > 1 && stack[stack.length - 1].depth >= depth) {
+            stack.pop();
+          }
+          
+          // Add the new node to its parent
+          stack[stack.length - 1].node.children.push(newNode);
+          stack.push({ node: newNode, depth: depth });
+        }
+        
+        // Update counters
+        if (totalNodesCounter) totalNodesCounter.textContent = state.totalNodes;
+        state.visibleNodes = state.totalNodes;
+        if (visibleNodesCounter) visibleNodesCounter.textContent = state.visibleNodes;
+        
+        return root;
+      };
+      
+      // Prepare tree data for visualization based on collapsed state
+      const prepareTreeData = (rootNode) => {
+        state.visibleNodes = 0;
+        
+        // Create a deep copy of the tree to avoid modifying the original data
+        const clonedRoot = JSON.parse(JSON.stringify(rootNode));
+        
+        const processNode = (node) => {
+          state.visibleNodes++;
+          
+          // Handle collapsed nodes
+          if (state.collapsed.has(node.id)) {
+            // Mark as collapsed for ECharts native expand/collapse
+            node.collapsed = true;
+            
+            // Store children temporarily if needed for custom handling
+            if (node.children) {
+              node._hiddenChildren = [...node.children];
+              node._collapsed = true;
+            }
+            
+            // For charts that don't support native collapsed property
+            if (state.currentDiagram === 'force' || state.currentDiagram === 'sankey') {
+              delete node.children;
+            }
+            
+            return;
+          }
+          
+          // Process children recursively
+          if (node.children && node.children.length > 0) {
+            node.children.forEach(processNode);
+          }
+        };
+        
+        // Process the entire tree
+        processNode(clonedRoot);
+        
+        // Update visible nodes counter
+        if (visibleNodesCounter) visibleNodesCounter.textContent = state.visibleNodes;
+        
+        return clonedRoot;
+      };
+      
+      // Toggle node expansion/collapse
+      const toggleNode = (nodeId) => {
+        const node = state.nodeById.get(nodeId);
+        if (!node) return;
+        
+        // Toggle the collapsed state
+        if (state.collapsed.has(nodeId)) {
+          state.collapsed.delete(nodeId);
+        } else if (node.children && node.children.length > 0) {
+          state.collapsed.add(nodeId);
+        }
+        
+        // Regenerate the diagram to apply changes
+        regenerateDiagram();
+      };
+      
+      // Regenerate diagram after node toggling
+      const regenerateDiagram = () => {
+        if (state.nodeById.get('node-0')) {
+          state.parsedData = prepareTreeData(state.nodeById.get('node-0'));
+          renderDiagram(state.currentDiagram);
+        }
+      };
+      
+      // === Chart Rendering ===
+      
+      // Initialize chart container
+      const initializeChart = () => {
+        if (state.chartInitialized && state.chart) {
+          state.chart.resize();
+          return state.chart;
+        }
+        
+        // Use requestAnimationFrame to ensure container is ready
+        return new Promise((resolve) => {
+          requestAnimationFrame(() => {
+            if (chartContainer.clientWidth === 0 || chartContainer.clientHeight === 0) {
+              console.warn("Chart container has zero dimensions. Forcing size.");
+              chartContainer.style.width = '800px';
+              chartContainer.style.height = '600px';
+            }
+            
+            try {
+              state.chart = echarts.init(chartContainer, null, {
+                renderer: 'canvas',
+                useDirtyRect: false
+              });
+              state.chartInitialized = true;
+              console.log("Chart initialized successfully");
+              resolve(state.chart);
+            } catch (error) {
+              console.error("Failed to initialize chart:", error);
+              showNotification("Error initializing visualization. Try refreshing the page.", "error");
+              chartContainer.innerHTML = `
+                <div class="error-message">
+                  <h3>Chart Initialization Error</h3>
+                  <p>${error.message}</p>
+                  <p>Please refresh the page to try again.</p>
+                </div>`;
+              resolve(null);
+            }
+          });
+        });
+      };
+      
+      // Generate the diagram
+      const generateDiagram = async (type) => {
+        if (!type || !diagramInfo[type]) {
+          type = 'tree';
+        }
+        
+        // Get editor content
+        const editorContent = editor.getValue();
+        
+        if (!editorContent || editorContent.trim() === '') {
+          showNotification("The editor is empty. Please add some content.", "error");
+          return;
+        }
+        
+        // Only parse if text changed or first time
+        if (editorContent !== state.lastInputText || !state.currentTreeData) {
+          state.currentTreeData = parseList(editorContent);
+          state.lastInputText = editorContent;
+        }
+        
+        // Process the data tree based on collapse state
+        state.parsedData = prepareTreeData(state.currentTreeData);
+        
+        // Render the diagram
+        await renderDiagram(type);
+      };
+      
+      // Render diagram with the specified type
+      const renderDiagram = async (type) => {
+        try {
+          state.currentDiagram = type;
+          
+          // Update the UI to reflect current diagram type
+          if (diagramTitle) diagramTitle.textContent = diagramInfo[type].title;
+          if (diagramDescription) diagramDescription.textContent = diagramInfo[type].description;
+          
+          // Initialize or get chart
+          if (!state.chart) {
+            await initializeChart();
+          }
+          
+          if (!state.chart) {
+            throw new Error("Chart not initialized properly");
+          }
+          
+          // Show loading indicator
+          state.chart.showLoading();
+          
+          // Create chart options based on current diagram type
+          const options = createChartOptions(state.parsedData, type);
+          
+          // Clear any existing event listeners
+          state.chart.off('click');
+          
+          // Apply new chart options (no need for chart.clear() since we use notMerge=true)
+          state.chart.setOption(options, { notMerge: true });
+          
+          // Add click handler for node toggling
+          state.chart.on('click', function(params) {
+            if (params.data && params.data.id) {
+              toggleNode(params.data.id);
+            }
+          });
+          
+          // Hide loading indicator
+          state.chart.hideLoading();
+          
+          // Show success notification
+          showNotification("Diagram generated successfully!", "success");
+        } catch (error) {
+          console.error("Error rendering diagram:", error);
+          showNotification(`Error rendering diagram: ${error.message}`, "error");
+        }
+      };
+      
+      // Create base chart options common to all diagrams
+      const createBaseOptions = (colorPalette) => {
+        return {
+          backgroundColor: '#fff',
+          tooltip: {
+            trigger: 'item',
+            formatter: function (params) {
+              const data = params.data;
+              return `<strong>${data.name || (data.label && data.label.formatter) || ''}</strong>`;
+            }
+          },
+          toolbox: {
+            show: true,
+            feature: {
+              restore: { show: true, title: 'Reset' },
+              saveAsImage: { show: true, title: 'Save' },
+              dataView: { show: true, title: 'Data', readOnly: true }
+            },
+            right: 20,
+            top: 20
+          },
+          series: []
+        };
+      };
+      
+      // Create chart options based on the selected diagram type
+      const createChartOptions = (data, type) => {
+        const colorPalette = colorPalettes[type] || colorPalettes.tree;
+        const baseOptions = createBaseOptions(colorPalette);
+        
+        switch (type) {
+          case 'tree':
+            return createTreeOptions(data, colorPalette, baseOptions);
+          case 'mindmap':
+            return createMindMapOptions(data, colorPalette, baseOptions);
+          case 'force':
+            return createForceGraphOptions(data, colorPalette, baseOptions);
+          case 'sankey':
+            return createSankeyOptions(data, colorPalette, baseOptions);
+          default:
+            return createTreeOptions(data, colorPalette, baseOptions);
+        }
+      };
+      
+      // Process tree nodes for visualization
+      const processTreeNode = (node, colorPalette) => {
+        const result = {
+          name: node.name,
+          id: node.id,
+          value: node.value || 10 - (node.depth || 0),
+          lineStyle: {
+            color: colorPalette[Math.min(node.depth || 0, colorPalette.length - 1)],
+            width: 1.5,
+            curveness: 0.5
+          },
+          itemStyle: {
+            color: colorPalette[Math.min(node.depth || 0, colorPalette.length - 1)],
+            borderColor: '#fff',
+            borderWidth: 2,
+            shadowColor: 'rgba(0, 0, 0, 0.3)',
+            shadowBlur: 5
+          },
+          label: {
+            position: 'right',
+            verticalAlign: 'middle',
+            align: 'left',
+            fontSize: 14,
+            fontWeight: '600',
+            color: '#333',
+            backgroundColor: 'rgba(255, 255, 255, 0.8)',
+            borderRadius: 3,
+            padding: [4, 8],
+            lineHeight: 20
+          }
+        };
+        
+        // Use ECharts native collapsed property if available
+        if (node.collapsed) {
+          result.collapsed = true;
+        }
+        
+        if (node.children && node.children.length > 0) {
+          result.children = node.children.map(child => processTreeNode(child, colorPalette));
+        }
+        
+        return result;
+      };
+      
+      // Enhanced styling for Tree Diagram
+      const createTreeOptions = (data, colorPalette, baseOptions) => {
+        const treeData = processTreeNode(data, colorPalette);
+        
+        // Add tree-specific toolbox option
+        baseOptions.toolbox.feature.dataZoom = { 
+          show: true, 
+          title: { zoom: 'Zoom', back: 'Back' } 
+        };
+        
+        baseOptions.toolbox.emphasis = {
+          iconStyle: {
+            borderColor: '#4361ee'
+          }
+        };
+        
+        // Add tree-specific series
+        baseOptions.series = [{
+          type: 'tree',
+          data: [treeData],
+          left: '5%',
+          right: '10%',
+          top: '15%',
+          bottom: '15%',
+          symbol: 'emptyCircle',
+          symbolSize: 12,
+          initialTreeDepth: state.maxDepth > 3 ? 2 : -1, // Smart default depth
+          layout: 'orthogonal',
+          orient: 'LR',
+          roam: true,
+          lineStyle: {
+            color: '#ccc',
+            width: 1.5,
+            curveness: 0.5
+          },
+          label: {
+            position: 'right',
+            verticalAlign: 'middle',
+            align: 'left',
+            fontSize: 14,
+            fontWeight: '600',
+            color: '#333'
+          },
+          leaves: {
+            label: {
+              position: 'right',
+              verticalAlign: 'middle',
+              align: 'left'
+            }
+          },
+          emphasis: {
+            focus: 'descendant',
+            label: {
+              fontSize: 16,
+              fontWeight: 'bold'
+            }
+          },
+          expandAndCollapse: true,
+          animationDuration: ANIMATION_DURATION,
+          animationDurationUpdate: ANIMATION_DURATION
+        }];
+        
+        return baseOptions;
+      };// Enhanced styling for Mind Map
+      const createMindMapOptions = (data, colorPalette, baseOptions) => {
+        const mindMapData = processTreeNode(data, colorPalette);
+        
+        // Add mindmap-specific toolbox option
+        baseOptions.toolbox.feature.dataZoom = { 
+          show: true, 
+          title: { zoom: 'Zoom', back: 'Back' } 
+        };
+        
+        baseOptions.toolbox.emphasis = {
+          iconStyle: {
+            borderColor: '#7209b7'
+          }
+        };
+        
+        // Add mindmap-specific series
+        baseOptions.series = [{
+          type: 'tree',
+          data: [mindMapData],
+          left: '0',
+          right: '0',
+          top: '15%',
+          bottom: '15%',
+          symbol: 'emptyCircle',
+          symbolSize: function(value, params) {
+            // Dynamic symbol size based on node value
+            return Math.max(8, params.data.value * 1.5);
+          },
+          initialTreeDepth: state.maxDepth > 3 ? 1 : -1, // Smart default depth
+          layout: 'radial',
+          roam: true,
+          lineStyle: {
+            color: '#ccc',
+            width: 1.5,
+            curveness: 0.5
+          },
+          label: {
+            rotate: 0,
+            position: 'radial',
+            distance: 15,
+            fontSize: 14,
+            fontWeight: '600',
+            color: '#333',
+            borderRadius: 4,
+            padding: [4, 8]
+          },
+          leaves: {
+            label: {
+              rotate: 0,
+              position: 'radial'
+            }
+          },
+          emphasis: {
+            focus: 'descendant',
+            itemStyle: {
+              shadowBlur: 10,
+              shadowColor: 'rgba(0,0,0,0.3)'
+            },
+            lineStyle: {
+              width: 2
+            }
+          },
+          expandAndCollapse: true,
+          animationDuration: ANIMATION_DURATION,
+          animationDurationUpdate: ANIMATION_DURATION,
+          animationEasing: 'cubicOut'
+        }];
+        
+        return baseOptions;
+      };
+      
+      // Force Graph implementation with enhanced features
+      const createForceGraphOptions = (data, colorPalette, baseOptions) => {
+        // Convert tree data to nodes and links format
+        const nodes = [];
+        const links = [];
+        const nodeIndexMap = new Map();
+        let nodeCounter = 0;
+        
+        const processNode = (node, parentIndex = -1) => {
+          const currentIndex = nodeCounter++;
+          const nodeDepth = node.depth || 0;
+          
+          // Store this node's index for efficient lookups
+          nodeIndexMap.set(node.id, currentIndex);
+          
+          // Create optimized node object
+          nodes.push({
+            id: node.id,
+            name: node.name,
+            value: node.value || 10 - nodeDepth,
+            symbolSize: Math.max(25 - (nodeDepth * 3), 8),
+            itemStyle: {
+              color: colorPalette[Math.min(nodeDepth, colorPalette.length - 1)],
+              borderColor: '#fff',
+              borderWidth: 2,
+              shadowBlur: 10,
+              shadowColor: 'rgba(0, 0, 0, 0.2)'
+            },
+            category: nodeDepth,
+            x: Math.random() * 100,
+            y: Math.random() * 100,
+            label: {
+              show: true,
+              position: 'right',
+              formatter: '{b}',
+              fontSize: 12,
+              color: '#333',
+              backgroundColor: 'rgba(255, 255, 255, 0.8)',
+              borderRadius: 3,
+              padding: [3, 5]
+            },
+            fixed: nodeDepth === 0 ? true : false,
+            draggable: true
+          });
+          
+          // Connect this node to its parent if it has one
+          if (parentIndex !== -1) {
+            links.push({
+              source: parentIndex,
+              target: currentIndex,
+              value: Math.max(5 - (nodeDepth * 0.5), 1),
+              lineStyle: {
+                width: Math.max(3 - (nodeDepth * 0.4), 1),
+                color: colorPalette[Math.min(nodeDepth, colorPalette.length - 1)],
+                opacity: 0.8,
+                curveness: 0.1
+              }
+            });
+          }
+          
+          // Process all child nodes recursively
+          if (node.children && node.children.length > 0) {
+            node.children.forEach(child => processNode(child, currentIndex));
+          }
+          
+          return currentIndex;
+        };
+        
+        // Start processing from the root node
+        processNode(data);
+        
+        // Create categories based on depth
+        const categories = [];
+        const maxDepth = Math.max(...nodes.map(node => node.category || 0));
+        for (let i = 0; i <= maxDepth; i++) {
+          let label = i === 0 ? 'Root' : i === 1 ? 'Main Categories' : `Level ${i}`;
+          categories.push({
+            name: label,
+            itemStyle: {
+              color: colorPalette[Math.min(i, colorPalette.length - 1)]
+            }
+          });
+        }
+        
+        // Force-specific toolbox options
+        baseOptions.toolbox.feature.dataZoom = { 
+          show: true, 
+          title: { zoom: 'Zoom', back: 'Back' } 
+        };
+        
+        baseOptions.toolbox.emphasis = {
+          iconStyle: {
+            borderColor: '#4cc9f0'
+          }
+        };
+        
+        // Add force-specific options
+        baseOptions.legend = {
+          data: categories.map(c => c.name),
+          orient: 'vertical',
+          right: 10,
+          top: 80,
+          textStyle: {
+            color: '#333'
+          },
+          selectedMode: 'multiple',
+          selected: categories.reduce((acc, cat) => {
+            acc[cat.name] = true;
+            return acc;
+          }, {})
+        };
+        
+        baseOptions.series = [{
+          type: 'graph',
+          layout: 'force',
+          data: nodes,
+          links: links,
+          categories: categories,
+          roam: true,
+          draggable: true,
+          label: {
+            show: true,
+            position: 'right'
+          },
+          force: {
+            edgeLength: [50, 100],
+            repulsion: 300,
+            gravity: 0.1,
+            layoutAnimation: true,
+            friction: 0.6
+          },
+          edgeSymbol: ['none', 'none'],
+          edgeLabel: {
+            show: false
+          },
+          emphasis: {
+            focus: 'adjacency',
+            lineStyle: {
+              width: 4
+            },
+            itemStyle: {
+              shadowBlur: 20,
+              shadowColor: 'rgba(0,0,0,0.5)'
+            }
+          },
+          animation: true,
+          animationDuration: ANIMATION_DURATION * 2.5,
+          animationEasingUpdate: 'quinticInOut'
+        }];
+        
+        return baseOptions;
+      };
+      
+      // Improved Sankey Diagram implementation
+      const createSankeyOptions = (data, colorPalette, baseOptions) => {
+        // Convert tree data to nodes and links format for Sankey
+        const nodes = [];
+        const links = [];
+        let nodeMap = new Map();
+        
+        // First pass: Calculate metrics for better visualization scaling
+        let maxChildren = 0;
+        let depthCounts = {};
+        
+        const countNodes = (node, depth = 0) => {
+          if (!depthCounts[depth]) depthCounts[depth] = 0;
+          depthCounts[depth]++;
+          
+          if (node.children) {
+            maxChildren = Math.max(maxChildren, node.children.length);
+            node.children.forEach(child => countNodes(child, depth + 1));
+          }
+        };
+        
+        countNodes(data);
+        
+        // Second pass: Create nodes and links
+        const processNode = (node, parent = null) => {
+          const nodeName = node.id;
+          const nodeDepth = node.depth || 0;
+          
+          if (!nodeMap.has(nodeName)) {
+            // Add node with appropriate properties for Sankey chart
+            nodes.push({
+              name: nodeName,
+              depth: nodeDepth,
+              nodeWidth: 15,
+              itemStyle: {
+                color: colorPalette[Math.min(nodeDepth, colorPalette.length - 1)],
+                borderColor: '#fff',
+                borderWidth: 1,
+                shadowBlur: 5,
+                shadowColor: 'rgba(0, 0, 0, 0.2)'
+              },
+              label: {
+                formatter: node.name,
+                fontSize: 12,
+                color: '#333',
+                fontWeight: 500,
+                backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                borderRadius: 3,
+                padding: [3, 5]
+              },
+              value: 10
+            });
+            
+            nodeMap.set(nodeName, nodes.length - 1);
+          }
+          
+          if (parent) {
+            links.push({
+              source: parent,
+              target: nodeName,
+              value: 1,
+              lineStyle: {
+                color: 'target',
+                opacity: 0.9,
+                curveness: 0.5
+              }
+            });
+          }
+          
+          // Process children recursively
+          if (node.children && node.children.length > 0) {
+            node.children.forEach(child => processNode(child, nodeName));
+          }
+        };
+        
+        // Start processing from the root node
+        processNode(data);
+        
+        // Sankey-specific toolbox options
+        baseOptions.toolbox = {
+          show: true,
+          orient: 'vertical',
+          left: 'right',
+          top: 'center',
+          feature: {
+            restore: { show: true, title: 'Reset' },
+            saveAsImage: { show: true, title: 'Save' },
+            dataView: { show: true, title: 'Data', readOnly: true }
+          },
+          emphasis: {
+            iconStyle: {
+              borderColor: '#06d6a0'
+            }
+          }
+        };
+        
+        // Add data zoom for better interaction
+        baseOptions.dataZoom = [
+          {
+            type: 'inside',
+            filterMode: 'none',
+            start: 0,
+            end: 100
+          },
+          {
+            type: 'slider',
+            filterMode: 'none',
+            start: 0,
+            end: 100
+          }
+        ];
+        
+        // Add proper grid settings
+        baseOptions.grid = {
+          left: '3%',
+          right: '4%',
+          bottom: '3%',
+          containLabel: true
+        };
+        
+        baseOptions.series = [{
+          type: 'sankey',
+          data: nodes,
+          links: links,
+          left: '5%',
+          right: '15%',
+          top: '10%',
+          bottom: '5%',
+          nodeWidth: 15,
+          nodeGap: 12,
+          layoutIterations: 64,
+          orient: 'horizontal',
+          emphasis: {
+            focus: 'adjacency'
+          },
+          roam: true,
+          scaleLimit: {
+            min: 0.4,
+            max: 2
+          },
+          draggable: true,
+          label: {
+            position: 'right',
+            fontSize: 12,
+            color: '#333',
+            fontWeight: 500,
+            formatter: '{b}'
+          },
+          lineStyle: {
+            color: 'gradient',
+            curveness: 0.5
+          },
+          animation: true,
+          animationDuration: ANIMATION_DURATION,
+          animationEasing: 'cubicOut',
+          levels: Array.from({ length: Math.max(...nodes.map(n => n.depth)) + 1 }, (_, i) => ({
+            depth: i,
+            itemStyle: {
+              color: colorPalette[Math.min(i, colorPalette.length - 1)]
+            }
+          }))
+        }];
+        
+        return baseOptions;
+      };
+      
+      // === Event Handlers ===
+      
+      // Generate button click handler
+      const onGenerateClick = () => {
+        generateDiagram(state.currentDiagram);
+      };
+      
+      // Diagram type button click handler
+      const onDiagramTypeClick = (newType) => {
+        if (newType === state.currentDiagram) return; // Skip if already active
+        
+        state.currentDiagram = newType;
+        
+        // Update button UI
+        diagramButtons.forEach(btn => {
+          if (btn.dataset.diagram === newType) {
+            btn.classList.add('active');
+          } else {
+            btn.classList.remove('active');
+          }
+        });
+        
+        // Only regenerate if we have data
+        if (state.parsedData) {
+          renderDiagram(newType);
+        }
+      };
+      
+      // Editor content change handler (debounced)
+      const onEditorChange = debounce(() => {
+        if (state.chart) {
+          generateDiagram(state.currentDiagram);
+        }
+      }, DEBOUNCE_DELAY);
+      
+      // Window resize handler for chart
+      const onWindowResize = () => {
+        if (state.chart) {
+          state.chart.resize();
+        }
+      };
+      
+      // === Setup Event Listeners ===
+      const setupEventListeners = () => {
+        // Generate button click
+        if (generateBtn) {
+          generateBtn.addEventListener('click', onGenerateClick);
+        }
+        
+        // Diagram type selection
+        if (diagramButtons) {
+          diagramButtons.forEach(button => {
+            button.addEventListener('click', () => {
+              onDiagramTypeClick(button.dataset.diagram);
+            });
+          });
+        }
+        
+        // Editor content change
+        editor.on('change', onEditorChange);
+        
+        // Window resize for responsive chart
+        window.addEventListener('resize', onWindowResize);
+      };
+      
+      // === Initialize Application ===
+      const initializeApp = async () => {
+        setupEventListeners();
+        await generateDiagram('tree');
+      };
+      
+      // Start the app
+      initializeApp();
+    });
+  </script>
+</body>
+</html>

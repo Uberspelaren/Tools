@@ -1,0 +1,33 @@
+Datum,Henrik,Elsa,Henrik_Reserverat,Elsa_Reserverat
+2025-03-27,20000,18000,0,0
+
+UTGIFTER
+Kategori,Namn,Belopp,Betald_av
+Boende,Lån swedbank,11763,Shared
+Boende,Lån MoP,1500,Shared
+Boende,Samfälldighetsavgift,2900,Shared
+Boende,El,600,Shared
+Boende,Tomträtt,1458,Shared
+Boende,Hemförsäktring,323,Shared
+Boende,Bredband,299,Shared
+Boende,Fastighetsskatt,794,Shared
+Boende,,0,Shared
+Barn,förskola,1700,Shared
+Boende,,0,Shared
+Boende,,0,Shared
+Boende,,0,Shared
+Boende,,0,Shared
+Boende,,0,Shared
+Boende,,0,Shared
+Boende,,0,Shared
+Boende,,0,Shared
+Boende,,0,Shared
+Boende,,0,Shared
+Boende,,0,Shared
+Boende,,0,Shared
+Boende,,0,Shared
+Boende,,0,Shared
+
+BOLÅN
+Namn,Lånebelopp,Räntesats,Räntebindning,Amortering,Ränteavdrag
+,0,0,rörlig,2,ja

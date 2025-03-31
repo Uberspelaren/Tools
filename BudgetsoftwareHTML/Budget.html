@@ -1,0 +1,2705 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dubbel-inkomst Budgetverktyg</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3a0ca3;
+            --success-color: #4cc9f0;
+            --warning-color: #f72585;
+            --light-color: #f8f9fa;
+            --dark-color: #212529;
+            --border-radius: 6px;
+            --box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 14px;
+        }
+
+        body {
+            background-color: #f5f7fa;
+            color: var(--dark-color);
+            line-height: 1.4;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 10px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 15px;
+            padding: 15px;
+            background-color: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+        }
+
+        h1 {
+            color: var(--primary-color);
+            margin-bottom: 6px;
+            font-size: 24px;
+        }
+
+        h2 {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        h3 {
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+
+        p {
+            margin-bottom: 6px;
+        }
+
+        .card {
+            background-color: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            padding: 12px;
+            margin-bottom: 12px;
+        }
+
+        .card h2 {
+            color: var(--primary-color);
+            margin-bottom: 10px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .form-group {
+            margin-bottom: 8px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 3px;
+            font-weight: bold;
+            color: var(--dark-color);
+            font-size: 13px;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 6px 8px;
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+            font-size: 14px;
+        }
+
+        input[type="number"] {
+            text-align: right;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: var(--secondary-color);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 12px;
+        }
+
+        .incomes-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .chart-container {
+            height: 450px;
+            width: 100%;
+        }
+
+        .expense-grid-container {
+            overflow-x: auto;
+            margin-top: 8px;
+        }
+
+        .expense-grid {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .expense-grid th {
+            background-color: #f0f4f8;
+            padding: 6px;
+            text-align: left;
+            border-bottom: 2px solid #ddd;
+            position: sticky;
+            top: 0;
+            font-size: 13px;
+        }
+
+        .expense-grid td {
+            padding: 4px 6px;
+            border-bottom: 1px solid #eee;
+            font-size: 13px;
+        }
+
+        .expense-grid input, .expense-grid select {
+            width: 100%;
+            padding: 3px 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .expense-grid input[type="number"] {
+            text-align: right;
+        }
+
+        .expense-grid input[type="checkbox"] {
+            width: auto;
+        }
+
+        .expense-grid tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .empty-grid-message {
+            text-align: center;
+            color: #6c757d;
+            padding: 10px;
+            font-size: 13px;
+        }
+
+        .expense-toolbar {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+
+        .category-tools {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .small-btn {
+            padding: 4px 8px;
+            font-size: 13px;
+        }
+
+        .action-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 2px;
+            color: var(--primary-color);
+        }
+        
+        .delete-btn {
+            color: var(--warning-color);
+        }
+        
+        .effective-amount {
+            font-weight: bold;
+            color: #0d6efd;
+        }
+
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 13px;
+        }
+
+        .summary-table th, 
+        .summary-table td {
+            padding: 6px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .summary-table th {
+            background-color: #f8f9fa;
+        }
+
+        .expense-controls {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .expense-controls select,
+        .expense-controls input {
+            flex: 1;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 20px;
+            color: #6c757d;
+        }
+
+        .tab-container {
+            margin-bottom: 12px;
+        }
+
+        .tabs {
+            display: flex;
+            list-style: none;
+            padding: 0;
+            margin-bottom: 12px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .tab-item {
+            padding: 6px 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 13px;
+        }
+
+        .tab-item.active {
+            background-color: var(--primary-color);
+            color: white;
+            border-top-left-radius: var(--border-radius);
+            border-top-right-radius: var(--border-radius);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .incomes-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+        }
+
+        .alert {
+            padding: 8px 12px;
+            border-radius: var(--border-radius);
+            margin-bottom: 10px;
+            display: none;
+            font-size: 13px;
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-danger {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .color-income-1 {
+            color: #3a86ff;
+        }
+
+        .color-income-2 {
+            color: #8338ec;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .badge-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .badge-secondary {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+
+        /* Kompakt layout för bolånekalkylatorn */
+        .mortgage-card {
+            grid-column: 1 / -1; /* Tar hela bredden */
+        }
+
+        .mortgage-grid-container {
+            margin-bottom: 8px;
+        }
+
+        .mortgage-toolbar {
+            margin-bottom: 8px;
+        }
+
+        .mortgage-payment {
+            white-space: nowrap;
+        }
+
+        .mortgage-payment-details {
+            font-size: 11px;
+            color: #666;
+        }
+
+        .mortgage-payment-deduction {
+            font-size: 11px;
+            color: #28a745;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-xs {
+            font-size: 11px;
+        }
+
+        .text-gray-600 {
+            color: #666;
+        }
+
+        .text-green-600 {
+            color: #28a745;
+        }
+
+        /* Kategori hantering */
+        .category-list {
+            margin-top: 8px;
+            margin-bottom: 8px;
+        }
+
+        .category-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 8px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .category-name {
+            font-weight: bold;
+        }
+
+        .category-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        .category-input-group {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .category-input-group input[type="color"] {
+            min-width: 40px;
+            height: 32px;
+            padding: 0;
+            border-radius: var(--border-radius);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 20px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            width: 80%;
+            max-width: 500px;
+        }
+
+        .close-modal {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close-modal:hover {
+            color: black;
+        }
+
+        .income-summary {
+            margin-top: 10px;
+            padding-top: 8px;
+            border-top: 1px solid #eee;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Budgetverktyg för Dubbel-inkomst</h1>
+            <p>Spåra och visualisera era gemensamma hushållsutgifter med separata inkomstströmmar</p>
+        </header>
+
+        <div class="alert alert-success" id="successAlert"></div>
+        <div class="alert alert-danger" id="errorAlert"></div>
+
+        <div class="tab-container">
+            <ul class="tabs">
+                <li class="tab-item active" data-tab="input-tab">Inmatning</li>
+                <li class="tab-item" data-tab="visualization-tab">Visualisering</li>
+                <li class="tab-item" data-tab="summary-tab">Sammanfattning</li>
+                <li class="tab-item" data-tab="history-tab">Historik</li>
+                <li class="tab-item" data-tab="categories-tab">Kategorier</li>
+            </ul>
+
+            <!-- Input Tab -->
+            <div class="tab-content active" id="input-tab">
+                <div class="card mortgage-card">
+                    <h2>Bolånekalkylator</h2>
+                    <div class="mortgage-toolbar">
+                        <button id="addMortgageBtn" class="small-btn">+ Lägg till bolån</button>
+                    </div>
+                    <div class="mortgage-grid-container">
+                        <table id="mortgageGrid" class="expense-grid">
+                            <thead>
+                                <tr>
+                                    <th>Namn</th>
+                                    <th>Lånebelopp</th>
+                                    <th>Räntesats (%)</th>
+                                    <th>Räntebindning</th>
+                                    <th>Amortering (%/år)</th>
+                                    <th>Ränteavdrag</th>
+                                    <th>Månatlig betalning</th>
+                                    <th>Åtgärder</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr id="emptyMortgageRow">
+                                    <td colspan="8" class="empty-grid-message">Inga bolån tillagda än. Klicka på "Lägg till bolån" för att börja.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="mortgageTotals" class="mortgage-totals" style="margin-top: 8px; font-weight: bold;">
+                        Total månatlig betalning: 0.00 kr
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Inkomstkällor</h2>
+                    <div class="incomes-grid">
+                        <div>
+                            <div class="form-group">
+                                <label for="income1Name">Inkomstkälla 1 Namn:</label>
+                                <input type="text" id="income1Name" placeholder="t.ex. Ditt Namn">
+                            </div>
+                            <div class="form-group">
+                                <label for="income1Amount">Månadsinkomst:</label>
+                                <input type="number" id="income1Amount" placeholder="0.00" min="0" step="0.01">
+                            </div>
+                            <div class="form-group">
+                                <label for="income1Reserved">Reserverat Belopp:</label>
+                                <input type="number" id="income1Reserved" placeholder="0.00" min="0" step="0.01" value="0">
+                            </div>
+                        </div>
+                        <div>
+                            <div class="form-group">
+                                <label for="income2Name">Inkomstkälla 2 Namn:</label>
+                                <input type="text" id="income2Name" placeholder="t.ex. Partners Namn">
+                            </div>
+                            <div class="form-group">
+                                <label for="income2Amount">Månadsinkomst:</label>
+                                <input type="number" id="income2Amount" placeholder="0.00" min="0" step="0.01">
+                            </div>
+                            <div class="form-group">
+                                <label for="income2Reserved">Reserverat Belopp:</label>
+                                <input type="number" id="income2Reserved" placeholder="0.00" min="0" step="0.01" value="0">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="income-summary" id="incomeSummary">
+                        <!-- Income summary will be displayed here -->
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Utgifter</h2>
+                    <div class="expense-toolbar">
+                        <button id="addRowBtn" class="small-btn">+ Lägg till rad</button>
+                        <select id="quickCategorySelect">
+                            <option value="">Välj kategori...</option>
+                            <!-- Categories will be filled dynamically -->
+                        </select>
+                    </div>
+                    <div class="expense-grid-container">
+                        <table id="expenseGrid" class="expense-grid">
+                            <thead>
+                                <tr>
+                                    <th>Kategori</th>
+                                    <th>Utgift</th>
+                                    <th>Belopp</th>
+                                    <th>Betald av</th>
+                                    <th>Åtgärder</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Expense rows will be added here -->
+                                <tr id="emptyGridRow">
+                                    <td colspan="5" class="empty-grid-message">Inga utgifter tillagda än. Klicka på "Lägg till rad" för att börja.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button id="calculateBtn">Beräkna budget</button>
+                    <button id="saveBtn">Spara data (CSV)</button>
+                    <button id="loadBtn">Ladda data (CSV)</button>
+                    <input type="file" id="fileInput" style="display: none;" accept=".csv">
+                </div>
+            </div>
+
+            <!-- Visualization Tab -->
+            <div class="tab-content" id="visualization-tab">
+                <div class="card">
+                    <h2>Budgetflöde Visualisering</h2>
+                    <div id="sankeyChart" class="chart-container"></div>
+                </div>
+
+                <div class="card">
+                    <h2>Kategorifördelning</h2>
+                    <div id="pieChart" class="chart-container"></div>
+                </div>
+            </div>
+
+            <!-- Summary Tab -->
+            <div class="tab-content" id="summary-tab">
+                <div class="card">
+                    <h2>Månadsbudget Sammanfattning</h2>
+                    <div id="summaryContent">
+                        <div class="empty-state">Beräkna din budget för att se en sammanfattning.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History Tab -->
+            <div class="tab-content" id="history-tab">
+                <div class="card">
+                    <h2>Historiska Data</h2>
+                    <p>Spåra din budget över tid genom att spara månadsdata.</p>
+                    <div id="historyContent">
+                        <div class="empty-state">Spara månadsdata för att bygga din historik.</div>
+                    </div>
+                    <div class="form-group">
+                        <label for="historyMonth">Spara nuvarande budget som:</label>
+                        <input type="month" id="historyMonth" value="">
+                        <button id="saveHistoryBtn" style="margin-top: 8px;">Spara till historik</button>
+                    </div>
+                    <div id="historyChart" class="chart-container" style="margin-top: 15px; display: none;"></div>
+                </div>
+            </div>
+
+            <!-- Categories Tab -->
+            <div class="tab-content" id="categories-tab">
+                <div class="card">
+                    <h2>Hantera Kategorier</h2>
+                    <p>Lägg till, redigera eller ta bort utgiftskategorier efter dina behov.</p>
+                    
+                    <div class="category-list" id="categoryList">
+                        <!-- Categories will be listed here -->
+                    </div>
+                    
+                    <div class="category-input-group">
+                        <input type="text" id="newCategoryName" placeholder="Ny kategori namn">
+                        <input type="color" id="newCategoryColor" value="#4361ee">
+                        <button id="addCategoryBtn" class="small-btn">Lägg till kategori</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Category Modal -->
+    <div id="editCategoryModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" id="closeModal">&times;</span>
+            <h3>Redigera Kategori</h3>
+            <div class="form-group">
+                <label for="editCategoryName">Kategorinamn:</label>
+                <input type="text" id="editCategoryName">
+            </div>
+            <div class="form-group">
+                <label for="editCategoryColor">Kategorifärg:</label>
+                <input type="color" id="editCategoryColor">
+            </div>
+            <input type="hidden" id="editCategoryId">
+            <button id="saveCategoryBtn">Spara ändringar</button>
+        </div>
+    </div>
+
+    <script>
+        // Wrap the entire application in an IIFE to avoid global scope pollution
+        const BudgetApp = (function() {
+            // Private state
+            const state = {
+                expenses: [],
+                mortgages: [],
+                historicalData: [],
+                categoryList: [
+                    { id: 1, name: 'Boende', color: '#4361ee' },
+                    { id: 2, name: 'Barn', color: '#3a0ca3' },
+                    { id: 3, name: 'Kläder', color: '#7209b7' },
+                    { id: 4, name: 'Övrigt', color: '#f72585' }
+                ],
+                nextExpenseId: 1,
+                nextMortgageId: 1,
+                nextCategoryId: 5,
+                charts: {
+                    sankeyChart: null,
+                    pieChart: null,
+                    historyChart: null
+                }
+            };
+            
+            // Cache frequently used DOM elements
+            const DOM = {
+                // Income elements
+                income1: {
+                    name: document.getElementById('income1Name'),
+                    amount: document.getElementById('income1Amount'),
+                    reserved: document.getElementById('income1Reserved')
+                },
+                income2: {
+                    name: document.getElementById('income2Name'),
+                    amount: document.getElementById('income2Amount'),
+                    reserved: document.getElementById('income2Reserved')
+                },
+                incomeSummary: document.getElementById('incomeSummary'),
+                
+                // Expense elements
+                expenseGrid: document.getElementById('expenseGrid'),
+                expenseTbody: document.getElementById('expenseGrid').getElementsByTagName('tbody')[0],
+                addRowBtn: document.getElementById('addRowBtn'),
+                quickCategorySelect: document.getElementById('quickCategorySelect'),
+                
+                // Mortgage elements
+                mortgageGrid: document.getElementById('mortgageGrid'),
+                mortgageTbody: document.getElementById('mortgageGrid').getElementsByTagName('tbody')[0],
+                mortgageTotals: document.getElementById('mortgageTotals'),
+                addMortgageBtn: document.getElementById('addMortgageBtn'),
+                
+                // Category elements
+                categoryList: document.getElementById('categoryList'),
+                newCategoryName: document.getElementById('newCategoryName'),
+                newCategoryColor: document.getElementById('newCategoryColor'),
+                addCategoryBtn: document.getElementById('addCategoryBtn'),
+                
+                // Modal elements
+                editCategoryModal: document.getElementById('editCategoryModal'),
+                editCategoryName: document.getElementById('editCategoryName'),
+                editCategoryColor: document.getElementById('editCategoryColor'),
+                editCategoryId: document.getElementById('editCategoryId'),
+                saveCategoryBtn: document.getElementById('saveCategoryBtn'),
+                closeModal: document.getElementById('closeModal'),
+                
+                // Chart elements
+                sankeyChart: document.getElementById('sankeyChart'),
+                pieChart: document.getElementById('pieChart'),
+                historyChart: document.getElementById('historyChart'),
+                
+                // Tab elements
+                tabs: document.querySelectorAll('.tab-item'),
+                tabContents: document.querySelectorAll('.tab-content'),
+                
+                // History elements
+                historyContent: document.getElementById('historyContent'),
+                historyMonth: document.getElementById('historyMonth'),
+                saveHistoryBtn: document.getElementById('saveHistoryBtn'),
+                
+                // Summary element
+                summaryContent: document.getElementById('summaryContent'),
+                
+                // Button elements
+                calculateBtn: document.getElementById('calculateBtn'),
+                saveBtn: document.getElementById('saveBtn'),
+                loadBtn: document.getElementById('loadBtn'),
+                fileInput: document.getElementById('fileInput'),
+                
+                // Alert elements
+                successAlert: document.getElementById('successAlert'),
+                errorAlert: document.getElementById('errorAlert')
+            };
+            
+            // Data persistence using localStorage
+            const Storage = {
+                // Save all app data to localStorage
+                saveState() {
+                    const dataToSave = {
+                        expenses: state.expenses,
+                        mortgages: state.mortgages,
+                        categoryList: state.categoryList,
+                        historicalData: state.historicalData,
+                        nextExpenseId: state.nextExpenseId,
+                        nextMortgageId: state.nextMortgageId,
+                        nextCategoryId: state.nextCategoryId,
+                        income1: {
+                            name: DOM.income1.name.value,
+                            amount: parseFloat(DOM.income1.amount.value) || 0,
+                            reserved: parseFloat(DOM.income1.reserved.value) || 0
+                        },
+                        income2: {
+                            name: DOM.income2.name.value,
+                            amount: parseFloat(DOM.income2.amount.value) || 0,
+                            reserved: parseFloat(DOM.income2.reserved.value) || 0
+                        }
+                    };
+                    
+                    try {
+                        localStorage.setItem('budgetAppData', JSON.stringify(dataToSave));
+                        return true;
+                    } catch (error) {
+                        console.error('Error saving to localStorage:', error);
+                        return false;
+                    }
+                },
+                
+                // Load app data from localStorage
+                loadState() {
+                    try {
+                        const savedData = localStorage.getItem('budgetAppData');
+                        if (!savedData) return false;
+                        
+                        const parsedData = JSON.parse(savedData);
+                        
+                        // Update state with saved data
+                        state.expenses = parsedData.expenses || [];
+                        state.mortgages = parsedData.mortgages || [];
+                        state.categoryList = parsedData.categoryList || state.categoryList;
+                        state.historicalData = parsedData.historicalData || [];
+                        state.nextExpenseId = parsedData.nextExpenseId || 1;
+                        state.nextMortgageId = parsedData.nextMortgageId || 1;
+                        state.nextCategoryId = parsedData.nextCategoryId || 5;
+                        
+                        // Update income fields
+                        if (parsedData.income1) {
+                            DOM.income1.name.value = parsedData.income1.name || '';
+                            DOM.income1.amount.value = parsedData.income1.amount || '';
+                            DOM.income1.reserved.value = parsedData.income1.reserved || 0;
+                        }
+                        
+                        if (parsedData.income2) {
+                            DOM.income2.name.value = parsedData.income2.name || '';
+                            DOM.income2.amount.value = parsedData.income2.amount || '';
+                            DOM.income2.reserved.value = parsedData.income2.reserved || 0;
+                        }
+                        
+                        return true;
+                    } catch (error) {
+                        console.error('Error loading from localStorage:', error);
+                        return false;
+                    }
+                },
+                
+                // Auto-save function to call after data changes
+                autoSave: debounce(function() {
+                    Storage.saveState();
+                }, 1000)
+            };
+            
+            // Utility functions
+            // Debounce function to limit rapid successive calculations
+            function debounce(func, wait) {
+                let timeout;
+                return function(...args) {
+                    const context = this;
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => func.apply(context, args), wait);
+                };
+            }
+            
+            // Show alert message
+            function showAlert(message, type) {
+                const alert = type === 'success' ? DOM.successAlert : DOM.errorAlert;
+                alert.textContent = message;
+                alert.style.display = 'block';
+                
+                setTimeout(() => {
+                    alert.style.display = 'none';
+                }, 3000);
+            }
+            
+            // Format month for display
+            function formatMonth(monthStr) {
+                const date = new Date(monthStr + '-01');
+                const options = { year: 'numeric', month: 'long' };
+                return date.toLocaleDateString('sv-SE', options);
+            }
+            
+            // Mortgage calculator functions
+            function calculateInterestDeduction(principal, interestRate, useDeduction) {
+                if (!useDeduction) return 0;
+                
+                // Månadsränta före skatt
+                const monthlyInterest = (principal * (interestRate / 100)) / 12;
+                
+                // 30% skattereduktion på räntebetalningar
+                return monthlyInterest * 0.3;
+            }
+            
+            function calculateAmortizationAmount(principal, amortizationPercent) {
+                return (principal * (amortizationPercent / 100)) / 12;
+            }
+            
+            // Helper function to update a single mortgage row
+            function updateMortgageRow(id) {
+                const row = document.querySelector(`#mortgageGrid tr[data-id="${id}"]`);
+                if (!row) return;
+                
+                const principalInput = row.querySelector('.mortgage-principal');
+                const rateInput = row.querySelector('.mortgage-rate');
+                const amortPercentInput = row.querySelector('.mortgage-amort-percent');
+                const useDeductionCheckbox = row.querySelector('.mortgage-use-deduction');
+                
+                const principal = parseFloat(principalInput.value) || 0;
+                const rate = parseFloat(rateInput.value) || 0;
+                const amortPercent = parseFloat(amortPercentInput.value) || 0;
+                const useDeduction = useDeductionCheckbox.checked;
+                
+                const monthlyInterest = (principal * (rate / 100)) / 12;
+                const monthlyAmortization = calculateAmortizationAmount(principal, amortPercent);
+                const deduction = calculateInterestDeduction(principal, rate, useDeduction);
+                
+                const totalPayment = monthlyInterest + monthlyAmortization - deduction;
+                
+                const paymentCell = row.querySelector('.mortgage-payment');
+                paymentCell.innerHTML = `
+                    ${totalPayment.toFixed(2)} kr
+                    <div class="mortgage-payment-details">
+                        Ränta: ${monthlyInterest.toFixed(2)} kr | Amortering: ${monthlyAmortization.toFixed(2)} kr
+                        <div class="mortgage-payment-deduction">Ränteavdrag: ${deduction.toFixed(2)} kr</div>
+                    </div>
+                `;
+                
+                saveMortgageData();
+                updateMortgageTotals();
+            }
+            
+            // Core functionality
+            // Update income summary
+            function updateIncomeSummary() {
+                const income1Name = DOM.income1.name.value || 'Inkomst 1';
+                const income2Name = DOM.income2.name.value || 'Inkomst 2';
+                const income1Amount = parseFloat(DOM.income1.amount.value) || 0;
+                const income2Amount = parseFloat(DOM.income2.amount.value) || 0;
+                const income1Reserved = parseFloat(DOM.income1.reserved.value) || 0;
+                const income2Reserved = parseFloat(DOM.income2.reserved.value) || 0;
+
+                const income1Remaining = Math.max(0, income1Amount - income1Reserved);
+                const income2Remaining = Math.max(0, income2Amount - income2Reserved);
+                const totalRemaining = income1Remaining + income2Remaining;
+
+                // Calculate split percentages
+                let income1Percentage = 50;
+                let income2Percentage = 50;
+                
+                if (totalRemaining > 0) {
+                    income1Percentage = Math.round((income1Remaining / totalRemaining) * 100);
+                    income2Percentage = 100 - income1Percentage;
+                }
+
+                const summaryHTML = `
+                    <p><strong>Efter reserverade belopp:</strong></p>
+                    <p>${income1Name}: ${income1Remaining.toFixed(2)} kr (${income1Percentage}% av delade utgifter)</p>
+                    <p>${income2Name}: ${income2Remaining.toFixed(2)} kr (${income2Percentage}% av delade utgifter)</p>
+                `;
+
+                DOM.incomeSummary.innerHTML = summaryHTML;
+                
+                return {
+                    income1Percentage,
+                    income2Percentage,
+                    income1Remaining,
+                    income2Remaining,
+                    totalRemaining
+                };
+            }
+            
+            // Debounced version of updateIncomeSummary
+            const debouncedUpdateIncomeSummary = debounce(updateIncomeSummary, 300);
+            
+            // Category management
+            function loadCategoriesToUI() {
+                // Update category list on categories tab
+                DOM.categoryList.innerHTML = '';
+
+                state.categoryList.forEach(category => {
+                    const categoryItem = document.createElement('div');
+                    categoryItem.className = 'category-item';
+                    categoryItem.innerHTML = `
+                        <div>
+                            <span class="category-color" style="background-color:${category.color}"></span>
+                            <span class="category-name">${category.name}</span>
+                        </div>
+                        <div>
+                            <button class="action-btn" onclick="BudgetApp.editCategory(${category.id})">✎</button>
+                            <button class="action-btn delete-btn" onclick="BudgetApp.deleteCategory(${category.id})">×</button>
+                        </div>
+                    `;
+                    DOM.categoryList.appendChild(categoryItem);
+                });
+
+                // Update category dropdowns
+                const quickCategorySelect = DOM.quickCategorySelect;
+                // Clear current options except the first one
+                quickCategorySelect.innerHTML = '<option value="">Välj kategori...</option>';
+                
+                // Add category options
+                state.categoryList.forEach(category => {
+                    const option = document.createElement('option');
+                    option.value = category.name;
+                    option.textContent = category.name;
+                    quickCategorySelect.appendChild(option);
+                });
+
+                // Update category dropdowns in expense grid
+                const categorySelects = document.querySelectorAll('.expense-category');
+                categorySelects.forEach(select => {
+                    const currentValue = select.value;
+                    select.innerHTML = '';
+                    
+                    state.categoryList.forEach(category => {
+                        const option = document.createElement('option');
+                        option.value = category.name;
+                        option.textContent = category.name;
+                        select.appendChild(option);
+                    });
+
+                    // Try to restore the previous value if it still exists
+                    if (state.categoryList.some(c => c.name === currentValue)) {
+                        select.value = currentValue;
+                    } else if (state.categoryList.length > 0) {
+                        select.value = state.categoryList[0].name;
+                    }
+                });
+                
+                Storage.autoSave();
+            }
+            
+            function editCategory(id) {
+                const category = state.categoryList.find(c => c.id === id);
+                if (!category) return;
+                
+                DOM.editCategoryName.value = category.name;
+                DOM.editCategoryColor.value = category.color;
+                DOM.editCategoryId.value = category.id;
+                
+                DOM.editCategoryModal.style.display = 'block';
+            }
+            
+            function saveCategoryHandler() {
+                const id = parseInt(DOM.editCategoryId.value);
+                const name = DOM.editCategoryName.value.trim();
+                const color = DOM.editCategoryColor.value;
+                
+                if (!name) {
+                    showAlert('Vänligen ange ett kategorinamn.', 'error');
+                    return;
+                }
+                
+                // Check if category name already exists (except for this category)
+                const duplicateName = state.categoryList.some(c => c.name === name && c.id !== id);
+                if (duplicateName) {
+                    showAlert('En kategori med detta namn finns redan.', 'error');
+                    return;
+                }
+                
+                // Find and update the category
+                const categoryIndex = state.categoryList.findIndex(c => c.id === id);
+                if (categoryIndex >= 0) {
+                    const oldName = state.categoryList[categoryIndex].name;
+                    state.categoryList[categoryIndex].name = name;
+                    state.categoryList[categoryIndex].color = color;
+                    
+                    // Update category name in expenses
+                    state.expenses.forEach(expense => {
+                        if (expense.category === oldName) {
+                            expense.category = name;
+                        }
+                    });
+                    
+                    loadCategoriesToUI();
+                    loadExpensesToGrid(); // Reload grid to update category names
+                    
+                    showAlert('Kategori uppdaterad!', 'success');
+                    DOM.editCategoryModal.style.display = 'none';
+                    
+                    Storage.autoSave();
+                }
+            }
+            
+            function addCategoryHandler() {
+                const name = DOM.newCategoryName.value.trim();
+                const color = DOM.newCategoryColor.value;
+                
+                if (!name) {
+                    showAlert('Vänligen ange ett kategorinamn.', 'error');
+                    return;
+                }
+                
+                // Check if category name already exists
+                if (state.categoryList.some(c => c.name === name)) {
+                    showAlert('En kategori med detta namn finns redan.', 'error');
+                    return;
+                }
+                
+                // Add new category
+                const newCategory = {
+                    id: state.nextCategoryId++,
+                    name: name,
+                    color: color
+                };
+                
+                state.categoryList.push(newCategory);
+                loadCategoriesToUI();
+                
+                // Clear input fields
+                DOM.newCategoryName.value = '';
+                
+                showAlert('Kategori skapad!', 'success');
+                Storage.autoSave();
+            }
+            
+            function deleteCategory(id) {
+                // Can't delete if less than 2 categories would remain
+                if (state.categoryList.length <= 1) {
+                    showAlert('Du måste ha minst en kategori.', 'error');
+                    return;
+                }
+                
+                const categoryIndex = state.categoryList.findIndex(c => c.id === id);
+                if (categoryIndex === -1) return;
+                
+                const categoryToDelete = state.categoryList[categoryIndex];
+                
+                // Find a default fallback category that is NOT the one we're deleting
+                let defaultCategory;
+                if (categoryToDelete.name === 'Övrigt') {
+                    // If deleting "Övrigt", find another category to use as fallback
+                    defaultCategory = state.categoryList.find(c => c.id !== id);
+                } else {
+                    // Otherwise try to use "Övrigt" as fallback if it exists
+                    defaultCategory = state.categoryList.find(c => c.name === 'Övrigt');
+                    // If "Övrigt" doesn't exist or is the one being deleted, use any other category
+                    if (!defaultCategory || defaultCategory.id === id) {
+                        defaultCategory = state.categoryList.find(c => c.id !== id);
+                    }
+                }
+                
+                if (!defaultCategory) {
+                    showAlert('Kunde inte hitta en ersättningskategori.', 'error');
+                    return;
+                }
+                
+                // Confirm deletion with clear message about what will happen
+                if (!confirm(`Är du säker att du vill ta bort kategorin "${categoryToDelete.name}"? Alla utgifter i denna kategori kommer att flyttas till "${defaultCategory.name}".`)) {
+                    return;
+                }
+                
+                // Update expenses to use the fallback category instead
+                state.expenses.forEach(expense => {
+                    if (expense.category === categoryToDelete.name) {
+                        expense.category = defaultCategory.name;
+                    }
+                });
+                
+                // Remove the category
+                state.categoryList = state.categoryList.filter(c => c.id !== id);
+                
+                loadCategoriesToUI();
+                loadExpensesToGrid(); // Reload grid to update category names
+                
+                showAlert(`Kategori raderad! Utgifter flyttade till "${defaultCategory.name}".`, 'success');
+                Storage.autoSave();
+            }
+            
+            // Expense management
+            function addExpenseRow(categoryName = null) {
+                // Remove empty message if it exists
+                const emptyRow = document.getElementById('emptyGridRow');
+                if (emptyRow) {
+                    emptyRow.remove();
+                }
+                
+                // Default to first category if none specified
+                if (!categoryName && state.categoryList.length > 0) {
+                    categoryName = state.categoryList[0].name;
+                } else if (!categoryName) {
+                    categoryName = 'Övrigt';
+                }
+                
+                const expenseGrid = DOM.expenseTbody;
+                const rowId = state.nextExpenseId++;
+                
+                const newRow = document.createElement('tr');
+                newRow.setAttribute('data-id', rowId);
+                
+                // Create category options
+                const categoryOptions = state.categoryList.map(category => 
+                    `<option value="${category.name}" ${category.name === categoryName ? 'selected' : ''}>${category.name}</option>`
+                ).join('');
+                
+                newRow.innerHTML = `
+                    <td>
+                        <select class="expense-category" data-id="${rowId}">
+                            ${categoryOptions}
+                        </select>
+                    </td>
+                    <td>
+                        <input type="text" class="expense-name" data-id="${rowId}" placeholder="t.ex., Hyra">
+                    </td>
+                    <td>
+                        <input type="number" class="expense-amount" data-id="${rowId}" placeholder="0.00" min="0" step="0.01">
+                    </td>
+                    <td>
+                        <select class="expense-payer" data-id="${rowId}">
+                            <option value="Shared">Delad</option>
+                            <option value="Income1">Inkomstkälla 1</option>
+                            <option value="Income2">Inkomstkälla 2</option>
+                        </select>
+                    </td>
+                    <td>
+                        <button class="action-btn delete-btn" onclick="BudgetApp.deleteExpenseRow(${rowId})">×</button>
+                    </td>
+                `;
+                
+                expenseGrid.appendChild(newRow);
+                
+                // Create and add expense object
+                const expense = {
+                    id: rowId,
+                    category: categoryName,
+                    name: '',
+                    amount: 0,
+                    payer: 'Shared',
+                };
+                
+                state.expenses.push(expense);
+                Storage.autoSave();
+            }
+            
+            function deleteExpenseRow(id) {
+                const row = document.querySelector(`tr[data-id="${id}"]`);
+                if (row) {
+                    row.remove();
+                }
+                
+                state.expenses = state.expenses.filter(expense => expense.id !== id);
+                
+                // Check if grid is empty and add empty message if needed
+                const grid = DOM.expenseTbody;
+                if (grid.children.length === 0) {
+                    const emptyRow = document.createElement('tr');
+                    emptyRow.id = 'emptyGridRow';
+                    emptyRow.innerHTML = '<td colspan="5" class="empty-grid-message">Inga utgifter tillagda än. Klicka på "Lägg till rad" för att börja.</td>';
+                    grid.appendChild(emptyRow);
+                }
+                
+                showAlert('Utgift raderad!', 'success');
+                Storage.autoSave();
+            }
+            
+            function saveExpenseData() {
+                const rows = document.querySelectorAll('#expenseGrid tbody tr:not(#emptyGridRow)');
+                
+                rows.forEach(row => {
+                    const id = parseInt(row.getAttribute('data-id'));
+                    const expenseIndex = state.expenses.findIndex(e => e.id === id);
+                    
+                    if (expenseIndex >= 0) {
+                        const category = row.querySelector('.expense-category').value;
+                        const name = row.querySelector('.expense-name').value;
+                        const amount = parseFloat(row.querySelector('.expense-amount').value) || 0;
+                        const payer = row.querySelector('.expense-payer').value;
+                        
+                        state.expenses[expenseIndex] = {
+                            id,
+                            category,
+                            name,
+                            amount,
+                            payer
+                        };
+                    }
+                });
+                
+                Storage.autoSave();
+            }
+            
+            function loadExpensesToGrid() {
+                // Clear existing rows except empty message
+                const tbody = DOM.expenseTbody;
+                tbody.innerHTML = '';
+                
+                if (state.expenses.length === 0) {
+                    const emptyRow = document.createElement('tr');
+                    emptyRow.id = 'emptyGridRow';
+                    emptyRow.innerHTML = '<td colspan="5" class="empty-grid-message">Inga utgifter tillagda än. Klicka på "Lägg till rad" för att börja.</td>';
+                    tbody.appendChild(emptyRow);
+                    return;
+                }
+                
+                // Add rows for each expense
+                state.expenses.forEach(expense => {
+                    const row = document.createElement('tr');
+                    row.setAttribute('data-id', expense.id);
+                    
+                    // Ensure nextExpenseId is always higher than existing ids
+                    if (expense.id >= state.nextExpenseId) {
+                        state.nextExpenseId = expense.id + 1;
+                    }
+                    
+                    // Create category options
+                    const categoryOptions = state.categoryList.map(category => 
+                        `<option value="${category.name}" ${category.name === expense.category ? 'selected' : ''}>${category.name}</option>`
+                    ).join('');
+                    
+                    row.innerHTML = `
+                        <td>
+                            <select class="expense-category" data-id="${expense.id}">
+                                ${categoryOptions}
+                            </select>
+                        </td>
+                        <td>
+                            <input type="text" class="expense-name" data-id="${expense.id}" value="${expense.name || ''}" placeholder="t.ex., Hyra">
+                        </td>
+                        <td>
+                            <input type="number" class="expense-amount" data-id="${expense.id}" value="${expense.amount || ''}" placeholder="0.00" min="0" step="0.01">
+                        </td>
+                        <td>
+                            <select class="expense-payer" data-id="${expense.id}">
+                                <option value="Shared" ${expense.payer === 'Shared' ? 'selected' : ''}>Delad</option>
+                                <option value="Income1" ${expense.payer === 'Income1' ? 'selected' : ''}>Inkomstkälla 1</option>
+                                <option value="Income2" ${expense.payer === 'Income2' ? 'selected' : ''}>Inkomstkälla 2</option>
+                            </select>
+                        </td>
+                        <td>
+                            <button class="action-btn delete-btn" onclick="BudgetApp.deleteExpenseRow(${expense.id})">×</button>
+                        </td>
+                    `;
+                    
+                    tbody.appendChild(row);
+                });
+            }
+            
+            // Mortgage management
+            function addMortgageRow() {
+                // Remove empty message if it exists
+                const emptyRow = document.getElementById('emptyMortgageRow');
+                if (emptyRow) {
+                    emptyRow.remove();
+                }
+                
+                const mortgageGrid = DOM.mortgageTbody;
+                const mortgageId = state.nextMortgageId++;
+                
+                const newRow = document.createElement('tr');
+                newRow.setAttribute('data-id', mortgageId);
+                newRow.innerHTML = `
+                    <td>
+                        <input type="text" class="mortgage-name" data-id="${mortgageId}" placeholder="t.ex., Huvudlån">
+                    </td>
+                    <td>
+                        <input type="number" class="mortgage-principal" data-id="${mortgageId}" placeholder="0" min="0" step="0.01">
+                    </td>
+                    <td>
+                        <input type="number" class="mortgage-rate" data-id="${mortgageId}" placeholder="3.5" min="0" step="0.01">
+                    </td>
+                    <td>
+                        <select class="mortgage-fixed-period" data-id="${mortgageId}">
+                            <option value="rörlig">Rörlig</option>
+                            <option value="1">1 år</option>
+                            <option value="2">2 år</option>
+                            <option value="3">3 år</option>
+                            <option value="5">5 år</option>
+                            <option value="10">10 år</option>
+                        </select>
+                    </td>
+                    <td>
+                        <input type="number" class="mortgage-amort-percent" data-id="${mortgageId}" placeholder="2" min="0" step="0.1" value="2">
+                    </td>
+                    <td class="text-center">
+                        <input type="checkbox" class="mortgage-use-deduction" data-id="${mortgageId}" checked>
+                    </td>
+                    <td class="mortgage-payment" data-id="${mortgageId}">
+                        0.00 kr
+                        <div class="mortgage-payment-details">
+                            Ränta: 0.00 kr | Amortering: 0.00 kr
+                            <div class="mortgage-payment-deduction">Ränteavdrag: 0.00 kr</div>
+                        </div>
+                    </td>
+                    <td>
+                        <button class="action-btn delete-btn" onclick="BudgetApp.deleteMortgageRow(${mortgageId})">×</button>
+                    </td>
+                `;
+                
+                mortgageGrid.appendChild(newRow);
+                
+                // Create and add mortgage object
+                const mortgage = {
+                    id: mortgageId,
+                    name: '',
+                    principal: 0,
+                    rate: 0,
+                    fixedRatePeriod: 'rörlig',
+                    amortizationPercent: 2,
+                    useDeduction: true
+                };
+                
+                state.mortgages.push(mortgage);
+                Storage.autoSave();
+            }
+            
+            function deleteMortgageRow(id) {
+                const row = document.querySelector(`#mortgageGrid tr[data-id="${id}"]`);
+                if (row) {
+                    row.remove();
+                }
+                
+                state.mortgages = state.mortgages.filter(mortgage => mortgage.id !== id);
+                updateMortgageTotals();
+                
+                // Check if grid is empty and add empty message if needed
+                const grid = DOM.mortgageTbody;
+                if (grid.children.length === 0) {
+                    const emptyRow = document.createElement('tr');
+                    emptyRow.id = 'emptyMortgageRow';
+                    emptyRow.innerHTML = '<td colspan="8" class="empty-grid-message">Inga bolån tillagda än. Klicka på "Lägg till bolån" för att börja.</td>';
+                    grid.appendChild(emptyRow);
+                }
+                
+                showAlert('Bolån raderat!', 'success');
+                Storage.autoSave();
+            }
+            
+            function saveMortgageData() {
+                const rows = document.querySelectorAll('#mortgageGrid tbody tr:not(#emptyMortgageRow)');
+                
+                rows.forEach(row => {
+                    const id = parseInt(row.getAttribute('data-id'));
+                    const mortgageIndex = state.mortgages.findIndex(m => m.id === id);
+                    
+                    if (mortgageIndex >= 0) {
+                        const name = row.querySelector('.mortgage-name').value;
+                        const principal = parseFloat(row.querySelector('.mortgage-principal').value) || 0;
+                        const rate = parseFloat(row.querySelector('.mortgage-rate').value) || 0;
+                        const fixedRatePeriod = row.querySelector('.mortgage-fixed-period').value;
+                        const amortizationPercent = parseFloat(row.querySelector('.mortgage-amort-percent').value) || 0;
+                        const useDeduction = row.querySelector('.mortgage-use-deduction').checked;
+                        
+                        state.mortgages[mortgageIndex] = {
+                            id,
+                            name,
+                            principal,
+                            rate,
+                            fixedRatePeriod,
+                            amortizationPercent,
+                            useDeduction
+                        };
+                    }
+                });
+                
+                Storage.autoSave();
+            }
+            
+            function updateMortgageTotals() {
+                const totalPayment = state.mortgages.reduce((sum, mortgage) => {
+                    const principal = mortgage.principal || 0;
+                    const rate = mortgage.rate || 0;
+                    const amortPercent = mortgage.amortizationPercent || 0;
+                    const useDeduction = mortgage.useDeduction !== undefined ? mortgage.useDeduction : true;
+                    
+                    const interest = (principal * (rate / 100)) / 12;
+                    const amortization = calculateAmortizationAmount(principal, amortPercent);
+                    const deduction = calculateInterestDeduction(principal, rate, useDeduction);
+                    
+                    return sum + interest + amortization - deduction;
+                }, 0);
+                
+                DOM.mortgageTotals.textContent = `Total månatlig betalning: ${totalPayment.toFixed(2)} kr`;
+            }
+            
+            function loadMortgagesToGrid() {
+                // Clear existing rows
+                const tbody = DOM.mortgageTbody;
+                tbody.innerHTML = '';
+                
+                if (state.mortgages.length === 0) {
+                    const emptyRow = document.createElement('tr');
+                    emptyRow.id = 'emptyMortgageRow';
+                    emptyRow.innerHTML = '<td colspan="8" class="empty-grid-message">Inga bolån tillagda än. Klicka på "Lägg till bolån" för att börja.</td>';
+                    tbody.appendChild(emptyRow);
+                    return;
+                }
+                
+                // Add rows for each mortgage
+                state.mortgages.forEach(mortgage => {
+                    const row = document.createElement('tr');
+                    row.setAttribute('data-id', mortgage.id);
+                    
+                    // Ensure nextMortgageId is always higher than existing ids
+                    if (mortgage.id >= state.nextMortgageId) {
+                        state.nextMortgageId = mortgage.id + 1;
+                    }
+                    
+                    // Calculate components
+                    const principal = mortgage.principal || 0;
+                    const rate = mortgage.rate || 0;
+                    const amortPercent = mortgage.amortizationPercent || 0;
+                    const useDeduction = mortgage.useDeduction !== undefined ? mortgage.useDeduction : true;
+                    
+                    const monthlyInterest = (principal * (rate / 100)) / 12;
+                    const monthlyAmortization = calculateAmortizationAmount(principal, amortPercent);
+                    const deduction = calculateInterestDeduction(principal, rate, useDeduction);
+                    const totalPayment = monthlyInterest + monthlyAmortization - deduction;
+                    
+                    row.innerHTML = `
+                        <td>
+                            <input type="text" class="mortgage-name" data-id="${mortgage.id}" value="${mortgage.name || ''}" placeholder="t.ex., Huvudlån">
+                        </td>
+                        <td>
+                            <input type="number" class="mortgage-principal" data-id="${mortgage.id}" value="${mortgage.principal || ''}" placeholder="0" min="0" step="0.01">
+                        </td>
+                        <td>
+                            <input type="number" class="mortgage-rate" data-id="${mortgage.id}" value="${mortgage.rate || ''}" placeholder="3.5" min="0" step="0.01">
+                        </td>
+                        <td>
+                            <select class="mortgage-fixed-period" data-id="${mortgage.id}">
+                                <option value="rörlig" ${mortgage.fixedRatePeriod === 'rörlig' ? 'selected' : ''}>Rörlig</option>
+                                <option value="1" ${mortgage.fixedRatePeriod === '1' ? 'selected' : ''}>1 år</option>
+                                <option value="2" ${mortgage.fixedRatePeriod === '2' ? 'selected' : ''}>2 år</option>
+                                <option value="3" ${mortgage.fixedRatePeriod === '3' ? 'selected' : ''}>3 år</option>
+                                <option value="5" ${mortgage.fixedRatePeriod === '5' ? 'selected' : ''}>5 år</option>
+                                <option value="10" ${mortgage.fixedRatePeriod === '10' ? 'selected' : ''}>10 år</option>
+                            </select>
+                        </td>
+                        <td>
+                            <input type="number" class="mortgage-amort-percent" data-id="${mortgage.id}" value="${mortgage.amortizationPercent || '0'}" placeholder="2" min="0" step="0.1">
+                        </td>
+                        <td class="text-center">
+                            <input type="checkbox" class="mortgage-use-deduction" data-id="${mortgage.id}" ${useDeduction ? 'checked' : ''}>
+                        </td>
+                        <td class="mortgage-payment" data-id="${mortgage.id}">
+                            ${totalPayment.toFixed(2)} kr
+                            <div class="mortgage-payment-details">
+                                Ränta: ${monthlyInterest.toFixed(2)} kr | Amortering: ${monthlyAmortization.toFixed(2)} kr
+                                <div class="mortgage-payment-deduction">Ränteavdrag: ${deduction.toFixed(2)} kr</div>
+                            </div>
+                        </td>
+                        <td>
+                            <button class="action-btn delete-btn" onclick="BudgetApp.deleteMortgageRow(${mortgage.id})">×</button>
+                        </td>
+                    `;
+                    
+                    tbody.appendChild(row);
+                });
+                
+                updateMortgageTotals();
+            }
+            
+            // Budget calculation
+            function calculateBudget() {
+                // Use destructuring for cleaner code
+                const { 
+                    value: income1Name = 'Inkomst 1' 
+                } = DOM.income1.name;
+                
+                const { 
+                    value: income2Name = 'Inkomst 2' 
+                } = DOM.income2.name;
+                
+                // Parse numeric values with defaults
+                const income1Amount = parseFloat(DOM.income1.amount.value) || 0;
+                const income2Amount = parseFloat(DOM.income2.amount.value) || 0;
+                const income1Reserved = parseFloat(DOM.income1.reserved.value) || 0;
+                const income2Reserved = parseFloat(DOM.income2.reserved.value) || 0;
+                
+                const income1Remaining = Math.max(0, income1Amount - income1Reserved);
+                const income2Remaining = Math.max(0, income2Amount - income2Reserved);
+                const totalRemaining = income1Remaining + income2Remaining;
+                
+                // Calculate income split percentages with a better default strategy
+                const [income1Percentage, income2Percentage] = totalRemaining > 0 
+                    ? [(income1Remaining / totalRemaining) * 100, (income2Remaining / totalRemaining) * 100]
+                    : [50, 50];
+                
+                if (income1Amount <= 0 && income2Amount <= 0) {
+                    showAlert('Vänligen ange giltiga inkomstbelopp.', 'error');
+                    return;
+                }
+                
+                if (state.expenses.length === 0 && state.mortgages.length === 0) {
+                    showAlert('Lägg till minst en utgift eller ett bolån.', 'error');
+                    return;
+                }
+                
+                // Use map for cleaner node creation
+                const nodes = [
+                    { name: income1Name },
+                    { name: income2Name },
+                    // Extract unique categories using Set
+                    ...Array.from(new Set(state.expenses.map(expense => expense.category)))
+                        .map(category => ({ name: category }))
+                ];
+                
+                // Add mortgage node if needed
+                if (state.mortgages.length > 0) {
+                    nodes.push({ name: 'Bolån' });
+                }
+                
+                // Initialize category tracking objects with reduce
+                const categoryTotals = state.categoryList.reduce((acc, category) => {
+                    acc[category.name] = 0;
+                    return acc;
+                }, {});
+                
+                const income1ExpensesByCategory = { ...categoryTotals };
+                const income2ExpensesByCategory = { ...categoryTotals };
+                
+                // Calculate mortgage totals
+                const mortgageCalc = state.mortgages.reduce((acc, mortgage) => {
+                    const principal = mortgage.principal || 0;
+                    const rate = mortgage.rate || 0;
+                    const amortPercent = mortgage.amortizationPercent || 0;
+                    const useDeduction = mortgage.useDeduction !== undefined ? mortgage.useDeduction : true;
+                    
+                    const interest = (principal * (rate / 100)) / 12;
+                    const amortization = calculateAmortizationAmount(principal, amortPercent);
+                    const deduction = calculateInterestDeduction(principal, rate, useDeduction);
+                    
+                    const payment = interest + amortization - deduction;
+                    
+                    return {
+                        totalPayment: acc.totalPayment + payment,
+                    };
+                }, { totalPayment: 0 });
+                
+                const totalMortgagePayment = mortgageCalc.totalPayment;
+                
+                // Split mortgage payment according to income percentages
+                const income1MortgageShare = totalMortgagePayment * (income1Percentage / 100);
+                const income2MortgageShare = totalMortgagePayment * (income2Percentage / 100);
+                
+                // Initialize links array
+                const links = [];
+                
+                // Add mortgage links if needed
+                if (totalMortgagePayment > 0) {
+                    // Add links only for non-zero values
+                    if (income1MortgageShare > 0) {
+                        links.push({
+                            source: income1Name,
+                            target: 'Bolån',
+                            value: income1MortgageShare
+                        });
+                    }
+                    
+                    if (income2MortgageShare > 0) {
+                        links.push({
+                            source: income2Name,
+                            target: 'Bolån',
+                            value: income2MortgageShare
+                        });
+                    }
+                    
+                    // Add mortgages to housing category for pie chart
+                    categoryTotals['Boende'] = (categoryTotals['Boende'] || 0) + totalMortgagePayment;
+                }
+                
+                // Process expenses with more functional approach
+                state.expenses.forEach(expense => {
+                    // Use object literal for cleaner code
+                    const { category, amount, payer } = expense;
+                    
+                    if (payer === 'Income1') {
+                        income1ExpensesByCategory[category] = (income1ExpensesByCategory[category] || 0) + amount;
+                    } else if (payer === 'Income2') {
+                        income2ExpensesByCategory[category] = (income2ExpensesByCategory[category] || 0) + amount;
+                    } else { // Shared
+                        // Use calculated income percentages for the split
+                        const amount1 = amount * (income1Percentage / 100);
+                        const amount2 = amount * (income2Percentage / 100);
+                        income1ExpensesByCategory[category] = (income1ExpensesByCategory[category] || 0) + amount1;
+                        income2ExpensesByCategory[category] = (income2ExpensesByCategory[category] || 0) + amount2;
+                    }
+                    
+                    categoryTotals[category] = (categoryTotals[category] || 0) + amount;
+                });
+                
+                // Add links from incomes to categories using for...of with Object.entries
+                for (const [category, amount] of Object.entries(income1ExpensesByCategory)) {
+                    if (amount > 0) {
+                        links.push({
+                            source: income1Name,
+                            target: category,
+                            value: amount
+                        });
+                    }
+                }
+                
+                for (const [category, amount] of Object.entries(income2ExpensesByCategory)) {
+                    if (amount > 0) {
+                        links.push({
+                            source: income2Name,
+                            target: category,
+                            value: amount
+                        });
+                    }
+                }
+                
+                // Configure and update charts
+                updateSankeyChart(nodes, links);
+                updatePieChart(categoryTotals);
+                
+                // Generate summary
+                updateSummary(
+                    income1Name, income2Name, 
+                    income1Amount, income2Amount,
+                    income1Reserved, income2Reserved,
+                    income1ExpensesByCategory, income2ExpensesByCategory, 
+                    categoryTotals, totalMortgagePayment,
+                    income1MortgageShare, income2MortgageShare
+                );
+                
+                // Switch to visualization tab
+                document.querySelector('.tab-item[data-tab="visualization-tab"]').click();
+                
+                showAlert('Budget beräknad!', 'success');
+            }
+            
+            // Helper function to update Sankey chart
+            function updateSankeyChart(nodes, links) {
+                const sankeyOption = {
+                    title: {
+                        text: 'Månadsbudget Flöde',
+                        left: 'center'
+                    },
+                    tooltip: {
+                        trigger: 'item',
+                        formatter: '{b}: {c} kr'
+                    },
+                    series: [{
+                        type: 'sankey',
+                        layout: 'none',
+                        emphasis: {
+                            focus: 'adjacency'
+                        },
+                        data: nodes,
+                        links,
+                        lineStyle: {
+                            color: 'gradient',
+                            curveness: 0.5
+                        }
+                    }]
+                };
+                
+                state.charts.sankeyChart.setOption(sankeyOption);
+            }
+            
+            // Helper function to update pie chart
+            function updatePieChart(categoryTotals) {
+                const pieOption = {
+                    title: {
+                        text: 'Utgiftskategorier',
+                        left: 'center'
+                    },
+                    tooltip: {
+                        trigger: 'item',
+                        formatter: '{b}: {c} kr ({d}%)'
+                    },
+                    legend: {
+                        orient: 'vertical',
+                        left: 'left'
+                    },
+                    series: [{
+                        name: 'Utgifter',
+                        type: 'pie',
+                        radius: '60%',
+                        center: ['50%', '50%'],
+                        data: Object.entries(categoryTotals).map(([categoryName, value]) => {
+                            const category = state.categoryList.find(c => c.name === categoryName);
+                            return {
+                                name: categoryName,
+                                value,
+                                itemStyle: { color: category ? category.color : '#f72585' }
+                            };
+                        }),
+                        emphasis: {
+                            itemStyle: {
+                                shadowBlur: 10,
+                                shadowOffsetX: 0,
+                                shadowColor: 'rgba(0, 0, 0, 0.5)'
+                            }
+                        }
+                    }]
+                };
+                
+                state.charts.pieChart.setOption(pieOption);
+            }
+            
+            // Update summary tab
+            function updateSummary(
+                income1Name, income2Name, 
+                income1Amount, income2Amount,
+                income1Reserved, income2Reserved,
+                income1ExpensesByCategory, income2ExpensesByCategory, 
+                categoryTotals, totalMortgagePayment,
+                income1MortgageShare, income2MortgageShare
+            ) {
+                // Calculate totals
+                const totalExpenses = Object.values(categoryTotals).reduce((sum, amount) => sum + amount, 0);
+                
+                // Calculate individual expenses (including mortgage shares)
+                const income1Expenses = Object.values(income1ExpensesByCategory).reduce((sum, amount) => sum + amount, 0) + income1MortgageShare;
+                const income2Expenses = Object.values(income2ExpensesByCategory).reduce((sum, amount) => sum + amount, 0) + income2MortgageShare;
+                
+                const income1Remaining = income1Amount - income1Reserved - income1Expenses;
+                const income2Remaining = income2Amount - income2Reserved - income2Expenses;
+                const totalRemaining = income1Remaining + income2Remaining;
+                
+                // Create summary HTML
+                let summaryHTML = `
+                    <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div>
+                            <h3 class="color-income-1">${income1Name} Sammanfattning</h3>
+                            <table class="summary-table">
+                                <tr>
+                                    <td>Total Inkomst:</td>
+                                    <td>${income1Amount.toFixed(2)} kr</td>
+                                </tr>
+                                <tr>
+                                    <td>Reserverat Belopp:</td>
+                                    <td>${income1Reserved.toFixed(2)} kr</td>
+                                </tr>
+                                <tr>
+                                    <td>Tillgängligt för Utgifter:</td>
+                                    <td>${(income1Amount - income1Reserved).toFixed(2)} kr</td>
+                                </tr>
+                                <tr>
+                                    <td>Totala Utgifter:</td>
+                                    <td>${income1Expenses.toFixed(2)} kr</td>
+                                </tr>
+                                <tr>
+                                    <td>Bolånedel:</td>
+                                    <td>${income1MortgageShare.toFixed(2)} kr</td>
+                                </tr>
+                                <tr>
+                                    <td>Återstående:</td>
+                                    <td>${income1Remaining.toFixed(2)} kr</td>
+                                </tr>
+                                <tr>
+                                    <td>Utgiftskvot:</td>
+                                    <td>${income1Amount > 0 ? ((income1Expenses / income1Amount) * 100).toFixed(1) : 0}%</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div>
+                            <h3 class="color-income-2">${income2Name} Sammanfattning</h3>
+                            <table class="summary-table">
+                                <tr>
+                                    <td>Total Inkomst:</td>
+                                    <td>${income2Amount.toFixed(2)} kr</td>
+                                </tr>
+                                <tr>
+                                    <td>Reserverat Belopp:</td>
+                                    <td>${income2Reserved.toFixed(2)} kr</td>
+                                </tr>
+                                <tr>
+                                    <td>Tillgängligt för Utgifter:</td>
+                                    <td>${(income2Amount - income2Reserved).toFixed(2)} kr</td>
+                                </tr>
+                                <tr>
+                                    <td>Totala Utgifter:</td>
+                                    <td>${income2Expenses.toFixed(2)} kr</td>
+                                </tr>
+                                <tr>
+                                    <td>Bolånedel:</td>
+                                    <td>${income2MortgageShare.toFixed(2)} kr</td>
+                                </tr>
+                                <tr>
+                                    <td>Återstående:</td>
+                                    <td>${income2Remaining.toFixed(2)} kr</td>
+                                </tr>
+                                <tr>
+                                    <td>Utgiftskvot:</td>
+                                    <td>${income2Amount > 0 ? ((income2Expenses / income2Amount) * 100).toFixed(1) : 0}%</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <h3 style="margin-top: 15px;">Hushållets Totaler</h3>
+                    <table class="summary-table">
+                        <tr>
+                            <td>Total Hushållsinkomst:</td>
+                            <td>${(income1Amount + income2Amount).toFixed(2)} kr</td>
+                        </tr>
+                        <tr>
+                            <td>Totalt Reserverat:</td>
+                            <td>${(income1Reserved + income2Reserved).toFixed(2)} kr</td>
+                        </tr>
+                        <tr>
+                            <td>Tillgängligt för Utgifter:</td>
+                            <td>${((income1Amount + income2Amount) - (income1Reserved + income2Reserved)).toFixed(2)} kr</td>
+                        </tr>
+                        <tr>
+                            <td>Totala Hushållsutgifter:</td>
+                            <td>${(totalExpenses + totalMortgagePayment).toFixed(2)} kr</td>
+                        </tr>
+                        <tr>
+                            <td>Totala Bolån:</td>
+                            <td>${totalMortgagePayment.toFixed(2)} kr</td>
+                        </tr>
+                        <tr>
+                            <td>Totalt Återstående:</td>
+                            <td>${totalRemaining.toFixed(2)} kr</td>
+                        </tr>
+                        <tr>
+                            <td>Hushållsutgiftskvot:</td>
+                            <td>${(income1Amount + income2Amount) > 0 ? (((totalExpenses + totalMortgagePayment) / (income1Amount + income2Amount)) * 100).toFixed(1) : 0}%</td>
+                        </tr>
+                    </table>
+                    
+                    <h3 style="margin-top: 15px;">Utgiftsfördelning per Kategori</h3>
+                    <table class="summary-table">
+                        <tr>
+                            <th>Kategori</th>
+                            <th>Belopp</th>
+                            <th>% av Totala Utgifter</th>
+                        </tr>
+                `;
+                
+                // Add row for mortgages if any
+                if (totalMortgagePayment > 0) {
+                    const mortgagePercentage = ((totalMortgagePayment / (totalExpenses + totalMortgagePayment)) * 100).toFixed(1);
+                    summaryHTML += `
+                        <tr>
+                            <td>Bolån</td>
+                            <td>${totalMortgagePayment.toFixed(2)} kr</td>
+                            <td>${mortgagePercentage}%</td>
+                        </tr>
+                    `;
+                }
+                
+                // Add other expense categories
+                Object.keys(categoryTotals).forEach(category => {
+                    if (categoryTotals[category] > 0) {
+                        summaryHTML += `
+                            <tr>
+                                <td>${category}</td>
+                                <td>${categoryTotals[category].toFixed(2)} kr</td>
+                                <td>${((categoryTotals[category] / (totalExpenses + totalMortgagePayment)) * 100).toFixed(1)}%</td>
+                            </tr>
+                        `;
+                    }
+                });
+                
+                summaryHTML += '</table>';
+                
+                DOM.summaryContent.innerHTML = summaryHTML;
+            }
+            
+            // Save data to CSV using PapaParse
+            function saveDataToCSV() {
+                // Make sure the expense data is up to date
+                saveExpenseData();
+                saveMortgageData();
+                
+                if (state.expenses.length === 0 && state.mortgages.length === 0) {
+                    showAlert('Inga data att spara.', 'error');
+                    return;
+                }
+                
+                const income1Name = DOM.income1.name.value || 'Inkomst 1';
+                const income2Name = DOM.income2.name.value || 'Inkomst 2';
+                const income1Amount = parseFloat(DOM.income1.amount.value) || 0;
+                const income2Amount = parseFloat(DOM.income2.amount.value) || 0;
+                const income1Reserved = parseFloat(DOM.income1.reserved.value) || 0;
+                const income2Reserved = parseFloat(DOM.income2.reserved.value) || 0;
+                
+                // Create income data
+                const incomeData = [{
+                    Datum: new Date().toISOString().split('T')[0],
+                    [income1Name]: income1Amount,
+                    [income2Name]: income2Amount,
+                    [`${income1Name}_Reserverat`]: income1Reserved,
+                    [`${income2Name}_Reserverat`]: income2Reserved
+                }];
+                
+                // Convert income data to CSV
+                const incomeCSV = Papa.unparse(incomeData);
+                
+                // Prepare expense data for CSV
+                const expenseData = state.expenses.map(expense => ({
+                    Kategori: expense.category,
+                    Namn: expense.name,
+                    Belopp: expense.amount,
+                    Betald_av: expense.payer
+                }));
+                
+                // Convert expense data to CSV
+                const expenseCSV = Papa.unparse({
+                    fields: ["Kategori", "Namn", "Belopp", "Betald_av"],
+                    data: expenseData.map(item => [item.Kategori, item.Namn, item.Belopp, item.Betald_av])
+                });
+                
+                // Prepare mortgage data for CSV
+                const mortgageData = state.mortgages.map(mortgage => ({
+                    Namn: mortgage.name,
+                    Lånebelopp: mortgage.principal || 0,
+                    Räntesats: mortgage.rate || 0,
+                    Räntebindning: mortgage.fixedRatePeriod || 'rörlig',
+                    Amortering: mortgage.amortizationPercent || 0,
+                    Ränteavdrag: mortgage.useDeduction ? 'ja' : 'nej'
+                }));
+                
+                // Convert mortgage data to CSV
+                const mortgageCSV = Papa.unparse({
+                    fields: ["Namn", "Lånebelopp", "Räntesats", "Räntebindning", "Amortering", "Ränteavdrag"],
+                    data: mortgageData.map(item => [
+                        item.Namn, item.Lånebelopp, item.Räntesats, 
+                        item.Räntebindning, item.Amortering, item.Ränteavdrag
+                    ])
+                });
+                
+                // Prepare category data for CSV
+                const categoryData = state.categoryList.map(category => ({
+                    ID: category.id,
+                    Namn: category.name,
+                    Färg: category.color
+                }));
+                
+                // Convert category data to CSV
+                const categoryCSV = Papa.unparse({
+                    fields: ["ID", "Namn", "Färg"],
+                    data: categoryData.map(item => [item.ID, item.Namn, item.Färg])
+                });
+                
+                // Combine all sections into one CSV content with section headers
+                let csvContent = incomeCSV + "\n\n";
+                csvContent += "UTGIFTER\n" + expenseCSV + "\n\n";
+                csvContent += "BOLÅN\n" + mortgageCSV + "\n\n";
+                csvContent += "KATEGORIER\n" + categoryCSV;
+                
+                // Create download link
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.setAttribute('href', url);
+                a.setAttribute('download', `budget_${new Date().toISOString().split('T')[0]}.csv`);
+                a.click();
+                
+                showAlert('Data sparad!', 'success');
+            }
+            
+            // Load data from CSV using PapaParse
+            function loadDataFromCSV(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    const contents = e.target.result;
+                    const lines = contents.split('\n');
+                    
+                    // Reset current data
+                    state.expenses = [];
+                    state.mortgages = [];
+                    state.nextExpenseId = 1;
+                    state.nextMortgageId = 1;
+                    
+                    // Find sections
+                    let currentSection = "INCOME";
+                    let sectionData = {
+                        INCOME: [],
+                        UTGIFTER: [],
+                        BOLÅN: [],
+                        KATEGORIER: []
+                    };
+                    
+                    // Group data by sections
+                    for (let i = 0; i < lines.length; i++) {
+                        const line = lines[i].trim();
+                        
+                        if (!line) continue;
+                        
+                        if (line === 'UTGIFTER' || line === 'EXPENSES') {
+                            currentSection = 'UTGIFTER';
+                            continue;
+                        } else if (line === 'BOLÅN' || line === 'MORTGAGES') {
+                            currentSection = 'BOLÅN';
+                            continue;
+                        } else if (line === 'KATEGORIER' || line === 'CATEGORIES') {
+                            currentSection = 'KATEGORIER';
+                            continue;
+                        }
+                        
+                        sectionData[currentSection].push(line);
+                    }
+                    
+                    // Parse income (first section)
+                    if (sectionData.INCOME.length >= 2) {
+                        // Parse with PapaParse
+                        const parsedIncome = Papa.parse(sectionData.INCOME.join('\n'), { header: true });
+                        
+                        if (parsedIncome.data.length > 0) {
+                            const incomeData = parsedIncome.data[0];
+                            const keys = Object.keys(incomeData);
+                            
+                            // Find income names and values
+                            if (keys.length >= 3) { // At least date + 2 incomes
+                                const dateKey = keys.find(k => k.toLowerCase().includes('datum') || k.toLowerCase().includes('date'));
+                                const incomeKeys = keys.filter(k => 
+                                    !k.toLowerCase().includes('datum') && 
+                                    !k.toLowerCase().includes('date') && 
+                                    !k.toLowerCase().includes('reserverat'));
+                                const reservedKeys = keys.filter(k => k.toLowerCase().includes('reserverat'));
+                                
+                                if (incomeKeys.length >= 2) {
+                                    DOM.income1.name.value = incomeKeys[0];
+                                    DOM.income2.name.value = incomeKeys[1];
+                                    DOM.income1.amount.value = parseFloat(incomeData[incomeKeys[0]]) || 0;
+                                    DOM.income2.amount.value = parseFloat(incomeData[incomeKeys[1]]) || 0;
+                                    
+                                    // Handle reserved amounts if present
+                                    if (reservedKeys.length >= 2) {
+                                        DOM.income1.reserved.value = parseFloat(incomeData[reservedKeys[0]]) || 0;
+                                        DOM.income2.reserved.value = parseFloat(incomeData[reservedKeys[1]]) || 0;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Parse expenses
+                    if (sectionData.UTGIFTER.length > 0) {
+                        const parsedExpenses = Papa.parse(sectionData.UTGIFTER.join('\n'), { 
+                            header: true,
+                            skipEmptyLines: true
+                        });
+                        
+                        parsedExpenses.data.forEach(row => {
+                            if (Object.keys(row).length >= 3) { // Ensure we have at least category, name, amount
+                                // Find the right column names (they might vary)
+                                const categoryKey = Object.keys(row).find(k => 
+                                    k.toLowerCase().includes('kategori') || k.toLowerCase().includes('category'));
+                                const nameKey = Object.keys(row).find(k => 
+                                    k.toLowerCase().includes('namn') || k.toLowerCase().includes('name'));
+                                const amountKey = Object.keys(row).find(k => 
+                                    k.toLowerCase().includes('belopp') || k.toLowerCase().includes('amount'));
+                                const payerKey = Object.keys(row).find(k => 
+                                    k.toLowerCase().includes('betald') || k.toLowerCase().includes('payer'));
+                                
+                                if (categoryKey && nameKey && amountKey) {
+                                    state.expenses.push({
+                                        id: state.nextExpenseId++,
+                                        category: row[categoryKey],
+                                        name: row[nameKey],
+                                        amount: parseFloat(row[amountKey]) || 0,
+                                        payer: payerKey ? row[payerKey] : 'Shared'
+                                    });
+                                }
+                            }
+                        });
+                    }
+                    
+                    // Parse mortgages
+                    if (sectionData.BOLÅN.length > 0) {
+                        const parsedMortgages = Papa.parse(sectionData.BOLÅN.join('\n'), { 
+                            header: true,
+                            skipEmptyLines: true
+                        });
+                        
+                        parsedMortgages.data.forEach(row => {
+                            if (Object.keys(row).length >= 3) { // Ensure we have basic mortgage data
+                                // Find the right column names
+                                const nameKey = Object.keys(row).find(k => 
+                                    k.toLowerCase().includes('namn') || k.toLowerCase().includes('name'));
+                                const principalKey = Object.keys(row).find(k => 
+                                    k.toLowerCase().includes('lånebelopp') || k.toLowerCase().includes('principal'));
+                                const rateKey = Object.keys(row).find(k => 
+                                    k.toLowerCase().includes('räntesats') || k.toLowerCase().includes('rate'));
+                                const fixedPeriodKey = Object.keys(row).find(k => 
+                                    k.toLowerCase().includes('räntebindning') || k.toLowerCase().includes('fixed'));
+                                const amortKey = Object.keys(row).find(k => 
+                                    k.toLowerCase().includes('amortering') || k.toLowerCase().includes('amort'));
+                                const deductionKey = Object.keys(row).find(k => 
+                                    k.toLowerCase().includes('ränteavdrag') || k.toLowerCase().includes('deduction'));
+                                
+                                if (nameKey && principalKey && rateKey) {
+                                    const principal = parseFloat(row[principalKey]) || 0;
+                                    const rate = parseFloat(row[rateKey]) || 0;
+                                    
+                                    // Handle different formats for period and amortization
+                                    let fixedRatePeriod = 'rörlig';
+                                    let amortizationPercent = 2;
+                                    let useDeduction = true;
+                                    
+                                    if (fixedPeriodKey) {
+                                        fixedRatePeriod = row[fixedPeriodKey] || 'rörlig';
+                                    }
+                                    
+                                    if (amortKey) {
+                                        amortizationPercent = parseFloat(row[amortKey]) || 0;
+                                    }
+                                    
+                                    if (deductionKey) {
+                                        useDeduction = row[deductionKey] === 'ja';
+                                    }
+                                    
+                                    state.mortgages.push({
+                                        id: state.nextMortgageId++,
+                                        name: row[nameKey],
+                                        principal,
+                                        rate,
+                                        fixedRatePeriod,
+                                        amortizationPercent,
+                                        useDeduction
+                                    });
+                                }
+                            }
+                        });
+                    }
+                    
+                    // Parse categories if present
+                    if (sectionData.KATEGORIER.length > 0) {
+                        // Backup current categories
+                        const oldCategories = [...state.categoryList];
+                        // Clear current categories
+                        state.categoryList = [];
+                        state.nextCategoryId = 1;
+                        
+                        const parsedCategories = Papa.parse(sectionData.KATEGORIER.join('\n'), { 
+                            header: true,
+                            skipEmptyLines: true
+                        });
+                        
+                        parsparsedCategories.data.forEach(row => {
+                            if (Object.keys(row).length >= 2) { // Need at least name and color
+                                // Find the right column names
+                                const idKey = Object.keys(row).find(k => k.toLowerCase() === 'id');
+                                const nameKey = Object.keys(row).find(k => 
+                                    k.toLowerCase().includes('namn') || k.toLowerCase().includes('name'));
+                                const colorKey = Object.keys(row).find(k => 
+                                    k.toLowerCase().includes('färg') || k.toLowerCase().includes('color'));
+                                
+                                if (nameKey && colorKey) {
+                                    const categoryId = idKey ? parseInt(row[idKey]) : state.nextCategoryId++;
+                                    
+                                    state.categoryList.push({
+                                        id: categoryId,
+                                        name: row[nameKey],
+                                        color: row[colorKey]
+                                    });
+                                    
+                                    // Update nextCategoryId if needed
+                                    if (categoryId >= state.nextCategoryId) {
+                                        state.nextCategoryId = categoryId + 1;
+                                    }
+                                }
+                            }
+                        });
+                        
+                        // If no categories were loaded, restore old ones
+                        if (state.categoryList.length === 0) {
+                            state.categoryList = oldCategories;
+                        }
+                    }
+                    
+                    // Update UI
+                    loadCategoriesToUI();
+                    loadExpensesToGrid();
+                    loadMortgagesToGrid();
+                    updateIncomeSummary();
+                    
+                    // Save to localStorage
+                    Storage.saveState();
+                    
+                    showAlert('Data laddad!', 'success');
+                    
+                    // Reset file input
+                    DOM.fileInput.value = '';
+                };
+                
+                reader.readAsText(file);
+            }
+            
+            // History functionality
+            function updateHistoryView() {
+                if (state.historicalData.length === 0) {
+                    DOM.historyContent.innerHTML = '<div class="empty-state">Spara månadsdata för att bygga din historik.</div>';
+                    DOM.historyChart.style.display = 'none';
+                    return;
+                }
+                
+                // Create history table
+                let tableHTML = `
+                    <table class="summary-table">
+                        <tr>
+                            <th>Månad</th>
+                            <th>Total Inkomst</th>
+                            <th>Totala Utgifter</th>
+                            <th>Återstående</th>
+                        </tr>
+                `;
+                
+                state.historicalData.forEach(item => {
+                    const totalIncome = item.income1 + item.income2;
+                    const totalExpenses = Object.values(item.categories).reduce((sum, amount) => sum + amount, 0);
+                    const remaining = totalIncome - totalExpenses;
+                    
+                    tableHTML += `
+                        <tr>
+                            <td>${formatMonth(item.month)}</td>
+                            <td>${totalIncome.toFixed(2)} kr</td>
+                            <td>${totalExpenses.toFixed(2)} kr</td>
+                            <td>${remaining.toFixed(2)} kr</td>
+                        </tr>
+                    `;
+                });
+                
+                tableHTML += '</table>';
+                DOM.historyContent.innerHTML = tableHTML;
+                
+                // Update history chart
+                updateHistoryChart();
+                DOM.historyChart.style.display = 'block';
+            }
+            
+            function updateHistoryChart() {
+                // Prepare data for the chart
+                const months = state.historicalData.map(item => formatMonth(item.month));
+                
+                // Get all unique category names across all historical data
+                const allCategories = new Set();
+                state.historicalData.forEach(item => {
+                    Object.keys(item.categories).forEach(category => {
+                        allCategories.add(category);
+                    });
+                });
+                
+                // Series data for each category
+                const seriesData = Array.from(allCategories).map(categoryName => {
+                    const category = state.categoryList.find(c => c.name === categoryName);
+                    return {
+                        name: categoryName,
+                        type: 'bar',
+                        stack: 'total',
+                        emphasis: { focus: 'series' },
+                        color: category ? category.color : '#f72585',
+                        data: state.historicalData.map(item => item.categories[categoryName] || 0)
+                    };
+                });
+                
+                // Add income lines
+                seriesData.push({
+                    name: 'Total Inkomst',
+                    type: 'line',
+                    symbol: 'circle',
+                    symbolSize: 8,
+                    lineStyle: { width: 2 },
+                    itemStyle: { color: '#4cc9f0' },
+                    data: state.historicalData.map(item => item.income1 + item.income2)
+                });
+                
+                const historyOption = {
+                    title: {
+                        text: 'Månadsbudget Historik',
+                        left: 'center'
+                    },
+                    tooltip: {
+                        trigger: 'axis',
+                        axisPointer: { type: 'shadow' },
+                        formatter: function(params) {
+                            let tooltip = params[0].axisValueLabel + '<br/>';
+                            let totalExpense = 0;
+                            
+                            params.forEach(param => {
+                                if (param.seriesName !== 'Total Inkomst') {
+                                    totalExpense += param.value;
+                                    tooltip += `${param.marker} ${param.seriesName}: ${param.value.toFixed(2)} kr<br/>`;
+                                }
+                            });
+                            
+                            // Find income value
+                            const incomeParam = params.find(param => param.seriesName === 'Total Inkomst');
+                            if (incomeParam) {
+                                tooltip += `<br/>Total Inkomst: ${incomeParam.value.toFixed(2)} kr<br/>`;
+                                tooltip += `Totala Utgifter: ${totalExpense.toFixed(2)} kr<br/>`;
+                                tooltip += `Återstående: ${(incomeParam.value - totalExpense).toFixed(2)} kr`;
+                            }
+                            
+                            return tooltip;
+                        }
+                    },
+                    legend: {
+                        data: [...allCategories, 'Total Inkomst'],
+                        bottom: 0
+                    },
+                    grid: {
+                        left: '3%',
+                        right: '4%',
+                        bottom: '15%',
+                        containLabel: true
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: months
+                    },
+                    yAxis: {
+                        type: 'value',
+                        name: 'Belopp (kr)',
+                        axisLabel: {
+                            formatter: '{value} kr'
+                        }
+                    },
+                    series: seriesData
+                };
+                
+                state.charts.historyChart.setOption(historyOption);
+            }
+            
+            function saveToHistory() {
+                const selectedMonth = DOM.historyMonth.value;
+                
+                if (!selectedMonth) {
+                    showAlert('Välj en månad att spara.', 'error');
+                    return;
+                }
+                
+                if (state.expenses.length === 0) {
+                    showAlert('Inga data att spara till historik.', 'error');
+                    return;
+                }
+                
+                const income1Name = DOM.income1.name.value || 'Inkomst 1';
+                const income2Name = DOM.income2.name.value || 'Inkomst 2';
+                const income1Amount = parseFloat(DOM.income1.amount.value) || 0;
+                const income2Amount = parseFloat(DOM.income2.amount.value) || 0;
+                
+                // Calculate category totals
+                const categoryTotals = {};
+                state.categoryList.forEach(category => {
+                    categoryTotals[category.name] = 0;
+                });
+                
+                state.expenses.forEach(expense => {
+                    categoryTotals[expense.category] = (categoryTotals[expense.category] || 0) + expense.amount;
+                });
+                
+                // Add mortgage payments to housing category
+                state.mortgages.forEach(mortgage => {
+                    const principal = mortgage.principal || 0;
+                    const rate = mortgage.rate || 0;
+                    const amortPercent = mortgage.amortizationPercent || 0;
+                    const useDeduction = mortgage.useDeduction !== undefined ? mortgage.useDeduction : true;
+                    
+                    const interest = (principal * (rate / 100)) / 12;
+                    const amortization = calculateAmortizationAmount(principal, amortPercent);
+                    const deduction = calculateInterestDeduction(principal, rate, useDeduction);
+                    
+                    const payment = interest + amortization - deduction;
+                    categoryTotals['Boende'] = (categoryTotals['Boende'] || 0) + payment;
+                });
+                
+                // Check if month already exists in history
+                const existingIndex = state.historicalData.findIndex(item => item.month === selectedMonth);
+                
+                if (existingIndex >= 0) {
+                    // Update existing month
+                    state.historicalData[existingIndex] = {
+                        month: selectedMonth,
+                        income1: income1Amount,
+                        income2: income2Amount,
+                        categories: categoryTotals
+                    };
+                } else {
+                    // Add new month
+                    state.historicalData.push({
+                        month: selectedMonth,
+                        income1: income1Amount,
+                        income2: income2Amount,
+                        categories: categoryTotals
+                    });
+                }
+                
+                // Sort historical data by month
+                state.historicalData.sort((a, b) => a.month.localeCompare(b.month));
+                
+                updateHistoryView();
+                Storage.autoSave();
+                showAlert(`Data sparad till historik för ${selectedMonth}!`, 'success');
+            }
+            
+            // Event handlers and setup
+            function tabClickHandler() {
+                // Remove active class from all tabs
+                DOM.tabs.forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                // Add active class to clicked tab
+                this.classList.add('active');
+                
+                // Hide all tab contents
+                DOM.tabContents.forEach(content => {
+                    content.classList.remove('active');
+                });
+                
+                // Show the corresponding tab content
+                const tabId = this.getAttribute('data-tab');
+                document.getElementById(tabId).classList.add('active');
+                
+                // Resize charts if the tab contains charts
+                if (tabId === 'visualization-tab') {
+                    state.charts.sankeyChart.resize();
+                    state.charts.pieChart.resize();
+                } else if (tabId === 'history-tab') {
+                    state.charts.historyChart.resize();
+                }
+            }
+            
+            function calculateBudgetHandler() {
+                saveExpenseData(); // Make sure expense data is up to date
+                saveMortgageData(); // Make sure mortgage data is up to date
+                calculateBudget();
+            }
+            
+            function quickCategorySelectChange() {
+                const category = this.value;
+                if (category) {
+                    addExpenseRow(category);
+                    this.value = ""; // Reset selection
+                }
+            }
+            
+            function closeModalHandler() {
+                DOM.editCategoryModal.style.display = 'none';
+            }
+            
+            function windowClickHandler(event) {
+                if (event.target === DOM.editCategoryModal) {
+                    DOM.editCategoryModal.style.display = 'none';
+                }
+            }
+            
+            function setupEventListeners() {
+                // Income input event listeners
+                DOM.income1.amount.addEventListener('input', debouncedUpdateIncomeSummary);
+                DOM.income1.reserved.addEventListener('input', debouncedUpdateIncomeSummary);
+                DOM.income2.amount.addEventListener('input', debouncedUpdateIncomeSummary);
+                DOM.income2.reserved.addEventListener('input', debouncedUpdateIncomeSummary);
+                
+                // Button event listeners
+                DOM.addRowBtn.addEventListener('click', () => addExpenseRow());
+                DOM.quickCategorySelect.addEventListener('change', quickCategorySelectChange);
+                DOM.addMortgageBtn.addEventListener('click', addMortgageRow);
+                DOM.calculateBtn.addEventListener('click', calculateBudgetHandler);
+                DOM.saveBtn.addEventListener('click', saveDataToCSV);
+                DOM.loadBtn.addEventListener('click', () => DOM.fileInput.click());
+                DOM.fileInput.addEventListener('change', loadDataFromCSV);
+                DOM.saveHistoryBtn.addEventListener('click', function() {
+                    saveExpenseData(); // Make sure expense data is up to date
+                    saveToHistory();
+                });
+                
+                // Category management event listeners
+                DOM.addCategoryBtn.addEventListener('click', addCategoryHandler);
+                DOM.saveCategoryBtn.addEventListener('click', saveCategoryHandler);
+                DOM.closeModal.addEventListener('click', closeModalHandler);
+                
+                // Tab event listeners
+                DOM.tabs.forEach(tabItem => {
+                    tabItem.addEventListener('click', tabClickHandler);
+                });
+                
+                // Event delegation for expense grid
+                DOM.expenseTbody.addEventListener('change', function(event) {
+                    const target = event.target;
+                    if (target.classList.contains('expense-category') || 
+                        target.classList.contains('expense-name') || 
+                        target.classList.contains('expense-amount') || 
+                        target.classList.contains('expense-payer')) {
+                        
+                        saveExpenseData();
+                    }
+                });
+                
+                // Event delegation for mortgage grid
+                DOM.mortgageTbody.addEventListener('input', function(event) {
+                    const target = event.target;
+                    const row = target.closest('tr');
+                    if (!row) return;
+                    
+                    const id = parseInt(row.getAttribute('data-id'));
+                    
+                    if (target.classList.contains('mortgage-principal') || 
+                        target.classList.contains('mortgage-rate') || 
+                        target.classList.contains('mortgage-amort-percent')) {
+                        
+                        updateMortgageRow(id);
+                    }
+                });
+                
+                DOM.mortgageTbody.addEventListener('change', function(event) {
+                    const target = event.target;
+                    
+                    if (target.classList.contains('mortgage-name') || 
+                        target.classList.contains('mortgage-fixed-period') || 
+                        target.classList.contains('mortgage-use-deduction')) {
+                        
+                        saveMortgageData();
+                        
+                        if (target.classList.contains('mortgage-use-deduction')) {
+                            const row = target.closest('tr');
+                            if (row) {
+                                const id = parseInt(row.getAttribute('data-id'));
+                                updateMortgageRow(id);
+                            }
+                        }
+                    }
+                });
+                
+                // Modal close on outside click
+                window.addEventListener('click', windowClickHandler);
+            }
+            
+            // Initialize the application
+            function initialize() {
+                // Initialize charts
+                state.charts.sankeyChart = echarts.init(DOM.sankeyChart);
+                state.charts.pieChart = echarts.init(DOM.pieChart);
+                state.charts.historyChart = echarts.init(DOM.historyChart);
+                
+                // Try to load saved data
+                const dataLoaded = Storage.loadState();
+                
+                // Set up event listeners
+                setupEventListeners();
+                
+                // Load categories
+                loadCategoriesToUI();
+                
+                // Initialize income summary
+                updateIncomeSummary();
+                
+                // Set current month for history section
+                const now = new Date();
+                const monthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                DOM.historyMonth.value = monthStr;
+                
+                if (dataLoaded) {
+                    // Load UI from saved state
+                    loadExpensesToGrid();
+                    loadMortgagesToGrid();
+                    updateHistoryView();
+                    
+                    showAlert('Sparad data laddad!', 'success');
+                } else {
+                    // Add default expense rows if empty
+                    if (state.expenses.length === 0) {
+                        // Add some common expense rows
+                        addExpenseRow('Boende');
+                        addExpenseRow('Barn');
+                        addExpenseRow('Övrigt');
+                    } else {
+                        // Load existing expenses
+                        loadExpensesToGrid();
+                    }
+                    
+                    // Add a default mortgage if empty
+                    if (state.mortgages.length === 0) {
+                        addMortgageRow();
+                    } else {
+                        loadMortgagesToGrid();
+                    }
+                }
+                
+                // Handle window resize to update charts
+                window.addEventListener('resize', function() {
+                    state.charts.sankeyChart.resize();
+                    state.charts.pieChart.resize();
+                    state.charts.historyChart.resize();
+                });
+            }
+            
+            // Public API - only expose what's needed
+            return {
+                initialize: initialize,
+                
+                // Expose functions needed as event handlers for HTML
+                deleteExpenseRow: deleteExpenseRow,
+                deleteCategory: deleteCategory,
+                editCategory: editCategory,
+                deleteMortgageRow: deleteMortgageRow
+            };
+        })();
+
+        // Start the application when the DOM is fully loaded
+        document.addEventListener('DOMContentLoaded', BudgetApp.initialize);
+    </script>
+</body>
+</html>

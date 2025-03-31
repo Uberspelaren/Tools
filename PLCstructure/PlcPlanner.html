@@ -1,0 +1,1711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PLC Program Structure Designer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .title {
+            margin: 0;
+            font-size: 1.5em;
+        }
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        .sidebar {
+            width: 250px;
+            background-color: #f5f5f5;
+            border-right: 1px solid #ddd;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+        .palette-group {
+            margin-bottom: 15px;
+        }
+        .palette-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            background-color: #e0e0e0;
+            padding: 5px;
+            border-radius: 4px;
+        }
+        .palette-items {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .palette-item {
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 10px;
+            text-align: center;
+            background-color: white;
+            cursor: grab;
+            user-select: none;
+            transition: background-color 0.2s;
+        }
+        .palette-item:hover {
+            background-color: #f0f0f0;
+        }
+        .workspace {
+            flex: 1;
+            background-color: #fff;
+            background-image: 
+                linear-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+            position: relative;
+            overflow: auto;
+        }
+        .block {
+            position: absolute;
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            padding: 10px;
+            min-width: 120px;
+            max-width: 250px;
+            cursor: move;
+            z-index: 1;
+        }
+        .block.main-program {
+            background-color: #d5f5e3;
+            border-left: 5px solid #27ae60;
+        }
+        .block.function-block {
+            background-color: #e8f8f5;
+            border-left: 5px solid #16a085;
+        }
+        .block.function {
+            background-color: #ebf5fb;
+            border-left: 5px solid #3498db;
+        }
+        .block.data-block {
+            background-color: #fef9e7;
+            border-left: 5px solid #f1c40f;
+        }
+        .block.interrupt {
+            background-color: #fdedec;
+            border-left: 5px solid #e74c3c;
+        }
+        .block.hardware {
+            background-color: #f4ecf7;
+            border-left: 5px solid #8e44ad;
+        }
+        .block-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+            padding-bottom: 5px;
+            border-bottom: 1px dashed #ccc;
+        }
+        .block-type {
+            font-size: 0.8em;
+            color: #777;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+        .block-description {
+            font-size: 0.9em;
+            color: #333;
+            margin-bottom: 8px;
+            word-wrap: break-word;
+        }
+        .block-id {
+            font-size: 0.75em;
+            color: #777;
+            text-align: right;
+            font-style: italic;
+        }
+        .block-ports {
+            display: flex;
+            justify-content: space-between;
+            padding-top: 8px;
+        }
+        .port {
+            width: 12px;
+            height: 12px;
+            background-color: #777;
+            border-radius: 50%;
+            cursor: pointer;
+            position: relative;
+        }
+        .port:hover {
+            background-color: #333;
+        }
+        .port-in {
+            background-color: #3498db;
+        }
+        .port-out {
+            background-color: #e74c3c;
+        }
+        .connector {
+            position: absolute;
+            z-index: 0;
+            pointer-events: none;
+        }
+        .connector-line {
+            position: absolute;
+            background-color: #555;
+            height: 2px;
+            transform-origin: left center;
+            pointer-events: none;
+        }
+        .connector-arrow {
+            position: absolute;
+            width: 0;
+            height: 0;
+            border-style: solid;
+            border-width: 6px 0 6px 10px;
+            border-color: transparent transparent transparent #555;
+            pointer-events: none;
+        }
+        .connection-label {
+            background-color: rgba(255, 255, 255, 0.8);
+            border: 1px solid #ddd;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 0.8em;
+            position: absolute;
+            transform: translate(-50%, -50%);
+            cursor: pointer;
+            z-index: 2;
+        }
+        .tools {
+            display: flex;
+            gap: 10px;
+        }
+        .tool-button, .action-button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 6px 12px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .tool-button:hover, .action-button:hover {
+            background-color: #2980b9;
+        }
+        .properties-panel {
+            width: 300px;
+            background-color: #f5f5f5;
+            border-left: 1px solid #ddd;
+            padding: 15px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .properties-title {
+            font-weight: bold;
+            font-size: 1.2em;
+            margin-bottom: 5px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #ddd;
+        }
+        .property-group {
+            background-color: white;
+            border-radius: 4px;
+            padding: 10px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .property-label {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #555;
+        }
+        .property-input {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 8px;
+            box-sizing: border-box;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .property-textarea {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 8px;
+            box-sizing: border-box;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            min-height: 80px;
+            resize: vertical;
+        }
+        .property-select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 8px;
+            box-sizing: border-box;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .footer {
+            background-color: #f0f0f0;
+            padding: 10px;
+            border-top: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+        }
+        .status {
+            color: #555;
+        }
+        .btn-group {
+            display: flex;
+            gap: 8px;
+        }
+        .button-row {
+            display: flex;
+            gap: 8px;
+            justify-content: space-between;
+        }
+        .danger-button {
+            background-color: #e74c3c;
+        }
+        .danger-button:hover {
+            background-color: #c0392b;
+        }
+        .mini-map {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 200px;
+            height: 150px;
+            background-color: rgba(255, 255, 255, 0.8);
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+            z-index: 1000;
+        }
+        .mini-map-content {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transform-origin: top left;
+        }
+        .mini-map-viewport {
+            position: absolute;
+            border: 2px solid #3498db;
+            background-color: rgba(52, 152, 219, 0.1);
+            pointer-events: none;
+        }
+        .notes-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            width: 250px;
+            background-color: rgba(255, 255, 255, 0.9);
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 10px;
+            z-index: 1000;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+        }
+        .notes-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .notes-content {
+            font-size: 0.9em;
+        }
+        .close-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #777;
+            font-size: 1.2em;
+        }
+        .close-btn:hover {
+            color: #333;
+        }
+        /* Tooltip */
+        .tooltip {
+            position: absolute;
+            background-color: #333;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            z-index: 1000;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        /* Context menu */
+        .context-menu {
+            position: absolute;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            display: none;
+        }
+        .context-menu-item {
+            padding: 8px 15px;
+            cursor: pointer;
+        }
+        .context-menu-item:hover {
+            background-color: #f5f5f5;
+        }
+        .context-menu-divider {
+            height: 1px;
+            background-color: #ddd;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1 class="title">PLC Program Structure Designer</h1>
+        <div class="tools">
+            <button id="new-btn" class="tool-button">New</button>
+            <button id="save-btn" class="tool-button">Save</button>
+            <button id="load-btn" class="tool-button">Load</button>
+            <button id="export-btn" class="tool-button">Export</button>
+            <button id="notes-toggle-btn" class="tool-button">Project Notes</button>
+            <button id="help-btn" class="tool-button">Help</button>
+        </div>
+    </div>
+    
+    <div class="main-container">
+        <div class="sidebar">
+            <div class="palette-group">
+                <div class="palette-title">Program Structure</div>
+                <div class="palette-items">
+                    <div class="palette-item" data-type="main-program">Main Program (OB)</div>
+                    <div class="palette-item" data-type="function-block">Function Block (FB)</div>
+                    <div class="palette-item" data-type="function">Function (FC)</div>
+                    <div class="palette-item" data-type="data-block">Data Block (DB)</div>
+                    <div class="palette-item" data-type="interrupt">Interrupt (OB)</div>
+                </div>
+            </div>
+            
+            <div class="palette-group">
+                <div class="palette-title">Hardware Components</div>
+                <div class="palette-items">
+                    <div class="palette-item" data-type="hardware">CPU</div>
+                    <div class="palette-item" data-type="hardware">I/O Module</div>
+                    <div class="palette-item" data-type="hardware">Communication Module</div>
+                    <div class="palette-item" data-type="hardware">HMI</div>
+                    <div class="palette-item" data-type="hardware">Field Device</div>
+                </div>
+            </div>
+            
+            <div class="palette-group">
+                <div class="palette-title">Program Categories</div>
+                <div class="palette-items">
+                    <div class="palette-item" data-type="function-block">Sequence Control</div>
+                    <div class="palette-item" data-type="function-block">Motion Control</div>
+                    <div class="palette-item" data-type="function-block">Process Control</div>
+                    <div class="palette-item" data-type="function-block">Alarm Handling</div>
+                    <div class="palette-item" data-type="function-block">Recipe Management</div>
+                    <div class="palette-item" data-type="function-block">Data Acquisition</div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="workspace" class="workspace"></div>
+        
+        <div class="properties-panel">
+            <div class="properties-title">Program Properties</div>
+            <div id="properties-content">
+                <div class="property-group">
+                    <div class="property-label">Project Information</div>
+                    <div style="margin-bottom: 8px;">
+                        <span class="property-label">Project Name:</span>
+                        <input type="text" id="project-name" class="property-input" value="New PLC Project">
+                    </div>
+                    <div style="margin-bottom: 8px;">
+                        <span class="property-label">Author:</span>
+                        <input type="text" id="project-author" class="property-input" value="">
+                    </div>
+                    <div style="margin-bottom: 8px;">
+                        <span class="property-label">Date:</span>
+                        <input type="text" id="project-date" class="property-input" value="">
+                    </div>
+                    <div>
+                        <span class="property-label">Description:</span>
+                        <textarea id="project-description" class="property-textarea"></textarea>
+                    </div>
+                    <button id="update-project-info" class="action-button">Update</button>
+                </div>
+                
+                <div class="property-group">
+                    <div class="property-label">PLC Information</div>
+                    <div style="margin-bottom: 8px;">
+                        <span class="property-label">PLC Type:</span>
+                        <select id="plc-type" class="property-select">
+                            <option>Siemens S7-1200</option>
+                            <option>Siemens S7-1500</option>
+                            <option>Siemens S7-300</option>
+                            <option>Allen Bradley ControlLogix</option>
+                            <option>Allen Bradley CompactLogix</option>
+                            <option>Mitsubishi FX</option>
+                            <option>Omron CP</option>
+                            <option>Schneider M340</option>
+                            <option>Other</option>
+                        </select>
+                    </div>
+                    <div style="margin-bottom: 8px;">
+                        <span class="property-label">Software:</span>
+                        <select id="plc-software" class="property-select">
+                            <option>TIA Portal V17</option>
+                            <option>TIA Portal V16</option>
+                            <option>TIA Portal V15</option>
+                            <option>Step 7 Classic</option>
+                            <option>Studio 5000</option>
+                            <option>RSLogix 5000</option>
+                            <option>GX Works 3</option>
+                            <option>CX-Programmer</option>
+                            <option>Other</option>
+                        </select>
+                    </div>
+                    <button id="update-plc-info" class="action-button">Update</button>
+                </div>
+                
+                <div class="property-group">
+                    <div class="property-label">Select an element to view its properties</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <div class="status">Ready</div>
+        <div class="btn-group">
+            <button id="mini-map-toggle" class="action-button">Toggle Mini-map</button>
+            <button id="zoom-in" class="action-button">+</button>
+            <button id="zoom-out" class="action-button">-</button>
+            <button id="zoom-reset" class="action-button">Reset View</button>
+        </div>
+    </div>
+    
+    <div id="mini-map" class="mini-map" style="display: none;">
+        <div id="mini-map-content" class="mini-map-content"></div>
+        <div id="mini-map-viewport" class="mini-map-viewport"></div>
+    </div>
+    
+    <div id="notes-panel" class="notes-panel">
+        <div class="notes-title">
+            Project Notes
+            <button id="close-notes" class="close-btn">&times;</button>
+        </div>
+        <div class="notes-content">
+            <textarea id="project-notes" style="width: 100%; height: 150px; resize: vertical;"></textarea>
+        </div>
+    </div>
+    
+    <div id="tooltip" class="tooltip"></div>
+    
+    <div id="context-menu" class="context-menu">
+        <div class="context-menu-item" id="ctx-rename">Rename</div>
+        <div class="context-menu-item" id="ctx-edit">Edit Description</div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item" id="ctx-bring-front">Bring to Front</div>
+        <div class="context-menu-item" id="ctx-send-back">Send to Back</div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item danger-button" id="ctx-delete">Delete</div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Main elements
+            const workspace = document.getElementById('workspace');
+            const propertiesContent = document.getElementById('properties-content');
+            const saveBtn = document.getElementById('save-btn');
+            const loadBtn = document.getElementById('load-btn');
+            const newBtn = document.getElementById('new-btn');
+            const exportBtn = document.getElementById('export-btn');
+            const helpBtn = document.getElementById('help-btn');
+            const notesToggleBtn = document.getElementById('notes-toggle-btn');
+            const notesPanel = document.getElementById('notes-panel');
+            const closeNotesBtn = document.getElementById('close-notes');
+            const projectNotes = document.getElementById('project-notes');
+            const miniMap = document.getElementById('mini-map');
+            const miniMapContent = document.getElementById('mini-map-content');
+            const miniMapViewport = document.getElementById('mini-map-viewport');
+            const miniMapToggle = document.getElementById('mini-map-toggle');
+            const zoomIn = document.getElementById('zoom-in');
+            const zoomOut = document.getElementById('zoom-out');
+            const zoomReset = document.getElementById('zoom-reset');
+            const tooltip = document.getElementById('tooltip');
+            const contextMenu = document.getElementById('context-menu');
+            
+            // State variables
+            let blocks = [];
+            let connections = [];
+            let isDragging = false;
+            let isConnecting = false;
+            let selectedBlock = null;
+            let startPort = null;
+            let tempConnection = null;
+            let nextId = 1;
+            let scale = 1;
+            let offsetX = 0;
+            let offsetY = 0;
+            let projectData = {
+                name: 'New PLC Project',
+                author: '',
+                date: new Date().toISOString().split('T')[0],
+                description: '',
+                plcType: 'Siemens S7-1200',
+                plcSoftware: 'TIA Portal V17',
+                notes: ''
+            };
+            
+            // Initialize project info
+            document.getElementById('project-name').value = projectData.name;
+            document.getElementById('project-author').value = projectData.author;
+            document.getElementById('project-date').value = projectData.date;
+            document.getElementById('project-description').value = projectData.description;
+            document.getElementById('plc-type').value = projectData.plcType;
+            document.getElementById('plc-software').value = projectData.plcSoftware;
+            projectNotes.value = projectData.notes;
+            
+            // Initialize drag-and-drop from palette
+            document.querySelectorAll('.palette-item').forEach(item => {
+                item.addEventListener('dragstart', function(e) {
+                    e.dataTransfer.setData('type', this.getAttribute('data-type'));
+                    e.dataTransfer.setData('name', this.textContent);
+                });
+                
+                item.setAttribute('draggable', 'true');
+                
+                // Add tooltips
+                item.addEventListener('mouseover', function(e) {
+                    showTooltip(this, getTypeDescription(this.getAttribute('data-type')));
+                });
+                
+                item.addEventListener('mouseout', function() {
+                    hideTooltip();
+                });
+            });
+            
+            // Workspace event handlers
+            workspace.addEventListener('dragover', function(e) {
+                e.preventDefault();
+            });
+            
+            workspace.addEventListener('drop', function(e) {
+                e.preventDefault();
+                const type = e.dataTransfer.getData('type');
+                const name = e.dataTransfer.getData('name');
+                if (type) {
+                    const rect = workspace.getBoundingClientRect();
+                    const x = (e.clientX - rect.left - offsetX) / scale;
+                    const y = (e.clientY - rect.top - offsetY) / scale;
+                    createNewBlock(type, name, x, y);
+                }
+            });
+            
+            workspace.addEventListener('click', function(e) {
+                if (e.target === workspace) {
+                    selectBlock(null);
+                    hideContextMenu();
+                }
+            });
+            
+            workspace.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+                hideContextMenu();
+            });
+            
+            workspace.addEventListener('mousemove', function(e) {
+                const rect = workspace.getBoundingClientRect();
+                const x = (e.clientX - rect.left - offsetX) / scale;
+                const y = (e.clientY - rect.top - offsetY) / scale;
+                
+                if (isDragging && selectedBlock) {
+                    moveBlock(selectedBlock, x - selectedBlock.offsetWidth / 2, y - selectedBlock.offsetHeight / 2);
+                    updateConnections();
+                    updateMiniMap();
+                } else if (isConnecting && startPort) {
+                    const endX = (e.clientX - rect.left) / scale;
+                    const endY = (e.clientY - rect.top) / scale;
+                    
+                    if (!tempConnection) {
+                        tempConnection = document.createElement('div');
+                        tempConnection.className = 'connector-line';
+                        workspace.appendChild(tempConnection);
+                        
+                        const arrow = document.createElement('div');
+                        arrow.className = 'connector-arrow';
+                        tempConnection.arrow = arrow;
+                        workspace.appendChild(arrow);
+                    }
+                    
+                    const startRect = startPort.getBoundingClientRect();
+                    const startX = (startRect.left + startRect.width/2 - rect.left) / scale;
+                    const startY = (startRect.top + startRect.height/2 - rect.top) / scale;
+                    
+                    drawLine(tempConnection, startX, startY, endX, endY);
+                }
+            });
+            
+            workspace.addEventListener('mouseup', function(e) {
+                if (isDragging) {
+                    isDragging = false;
+                }
+                
+                if (isConnecting && startPort) {
+                    if (e.target.classList.contains('port') && e.target !== startPort) {
+                        createConnection(startPort, e.target);
+                    }
+                    
+                    if (tempConnection) {
+                        tempConnection.remove();
+                        if (tempConnection.arrow) {
+                            tempConnection.arrow.remove();
+                        }
+                        if (tempConnection.label) {
+                            tempConnection.label.remove();
+                        }
+                        tempConnection = null;
+                    }
+                    
+                    isConnecting = false;
+                    startPort = null;
+                }
+            });
+            
+            // Button handlers
+            saveBtn.addEventListener('click', function() {
+                saveDesign();
+            });
+            
+            loadBtn.addEventListener('click', function() {
+                loadDesign();
+            });
+            
+            newBtn.addEventListener('click', function() {
+                if (confirm('Create new design? Any unsaved changes will be lost.')) {
+                    clearWorkspace();
+                }
+            });
+            
+            exportBtn.addEventListener('click', function() {
+                exportDesign();
+            });
+            
+            helpBtn.addEventListener('click', function() {
+                showHelp();
+            });
+            
+            notesToggleBtn.addEventListener('click', function() {
+                notesPanel.style.display = notesPanel.style.display === 'none' ? 'block' : 'none';
+            });
+            
+            closeNotesBtn.addEventListener('click', function() {
+                notesPanel.style.display = 'none';
+            });
+            
+            projectNotes.addEventListener('input', function() {
+                projectData.notes = this.value;
+            });
+            
+            document.getElementById('update-project-info').addEventListener('click', function() {
+                projectData.name = document.getElementById('project-name').value;
+                projectData.author = document.getElementById('project-author').value;
+                projectData.date = document.getElementById('project-date').value;
+                projectData.description = document.getElementById('project-description').value;
+                alert('Project information updated!');
+            });
+            
+            document.getElementById('update-plc-info').addEventListener('click', function() {
+                projectData.plcType = document.getElementById('plc-type').value;
+                projectData.plcSoftware = document.getElementById('plc-software').value;
+                alert('PLC information updated!');
+            });
+            
+            // Mini-map and zoom controls
+            miniMapToggle.addEventListener('click', function() {
+                miniMap.style.display = miniMap.style.display === 'none' ? 'block' : 'none';
+                if (miniMap.style.display === 'block') {
+                    updateMiniMap();
+                }
+            });
+            
+            zoomIn.addEventListener('click', function() {
+                scale *= 1.2;
+                updateZoom();
+            });
+            
+            zoomOut.addEventListener('click', function() {
+                scale /= 1.2;
+                updateZoom();
+            });
+            
+            zoomReset.addEventListener('click', function() {
+                scale = 1;
+                offsetX = 0;
+                offsetY = 0;
+                updateZoom();
+            });
+            
+            // Context menu handlers
+            document.getElementById('ctx-rename').addEventListener('click', function() {
+                if (selectedBlock) {
+                    const newName = prompt('Enter new name', selectedBlock.dataset.name);
+                    if (newName) {
+                        selectedBlock.dataset.name = newName;
+                        selectedBlock.querySelector('.block-title').textContent = newName;
+                        updateBlockProperties(selectedBlock);
+                    }
+                }
+                hideContextMenu();
+            });
+            
+            document.getElementById('ctx-edit').addEventListener('click', function() {
+                if (selectedBlock) {
+                    const newDesc = prompt('Enter new description', selectedBlock.dataset.description);
+                    if (newDesc !== null) {
+                        selectedBlock.dataset.description = newDesc;
+                        selectedBlock.querySelector('.block-description').textContent = newDesc;
+                        updateBlockProperties(selectedBlock);
+                    }
+                }
+                hideContextMenu();
+            });
+            
+            document.getElementById('ctx-bring-front').addEventListener('click', function() {
+                if (selectedBlock) {
+                    selectedBlock.style.zIndex = 10;
+                }
+                hideContextMenu();
+            });
+            
+            document.getElementById('ctx-send-back').addEventListener('click', function() {
+                if (selectedBlock) {
+                    selectedBlock.style.zIndex = 1;
+                }
+                hideContextMenu();
+            });
+            
+            document.getElementById('ctx-delete').addEventListener('click', function() {
+                if (selectedBlock) {
+                    deleteBlock(selectedBlock);
+                }
+                hideContextMenu();
+            });
+            
+            // Functions
+            function createNewBlock(type, name, x, y) {
+                const block = document.createElement('div');
+                block.className = `block ${type}`;
+                block.id = `block-${nextId++}`;
+                block.dataset.type = type;
+                block.dataset.name = name;
+                block.dataset.description = getDefaultDescription(type);
+                
+                block.innerHTML = `
+                    <div class="block-type">${formatBlockType(type)}</div>
+                    <div class="block-title">${name}</div>
+                    <div class="block-description">${block.dataset.description}</div>
+                    <div class="block-id">#${block.id.split('-')[1]}</div>
+                    <div class="block-ports">
+                        <div class="port port-in" data-port="in"></div>
+                        <div class="port port-out" data-port="out"></div>
+                    </div>
+                `;
+                
+                block.style.left = `${x}px`;
+                block.style.top = `${y}px`;
+                block.style.zIndex = 1;
+                
+                workspace.appendChild(block);
+                blocks.push(block);
+                
+                // Add event listeners to the block
+                block.addEventListener('mousedown', function(e) {
+                    if (!e.target.classList.contains('port')) {
+                        selectBlock(block);
+                        isDragging = true;
+                        
+                        // Prevent text selection during drag
+                        e.preventDefault();
+                    }
+                });
+                
+                block.addEventListener('contextmenu', function(e) {
+                    e.preventDefault();
+                    selectBlock(block);
+                    showContextMenu(e.clientX, e.clientY);
+                });
+                
+                // Add event listeners to ports
+                block.querySelectorAll('.port').forEach(port => {
+                    port.addEventListener('mousedown', function(e) {
+                        e.stopPropagation();
+                        startPort = port;
+                        isConnecting = true;
+                    });
+                    
+                    // Add tooltips
+                    port.addEventListener('mouseover', function() {
+                        if (port.classList.contains('port-in')) {
+                            showTooltip(port, 'Input Port - Drag from here to create a connection');
+                        } else {
+                            showTooltip(port, 'Output Port - Drag from here to create a connection');
+                        }
+                    });
+                    
+                    port.addEventListener('mouseout', function() {
+                        hideTooltip();
+                    });
+                });
+                
+                selectBlock(block);
+                updateMiniMap();
+                return block;
+            }
+            
+            function formatBlockType(type) {
+                return type.split('-').map(word => 
+                    word.charAt(0).toUpperCase() + word.slice(1)
+                ).join(' ');
+            }
+            
+            function getDefaultDescription(type) {
+                switch(type) {
+                    case 'main-program':
+                        return 'Main organization block that runs cyclically.';
+                    case 'function-block':
+                        return 'Reusable code block with persistent internal memory.';
+                    case 'function':
+                        return 'Reusable code block without internal memory.';
+                    case 'data-block':
+                        return 'Storage for program variables and parameters.';
+                    case 'interrupt':
+                        return 'Handles specific events or time-based routines.';
+                    case 'hardware':
+                        return 'Physical hardware component in the system.';
+                    default:
+                        return 'Program component - add description here.';
+                }
+            }
+            
+            function getTypeDescription(type) {
+                switch(type) {
+                    case 'main-program':
+                        return 'Main program organization block (OB1) - Executes cyclically';
+                    case 'function-block':
+                        return 'Function Block (FB) - Code with internal memory';
+                    case 'function':
+                        return 'Function (FC) - Reusable code without memory';
+                    case 'data-block':
+                        return 'Data Block (DB) - Stores variables and parameters';
+                    case 'interrupt':
+                        return 'Interrupt OB - Handles events, alarms, or timed executions';
+                    case 'hardware':
+                        return 'Hardware component representation';
+                    default:
+                        return type;
+                }
+            }
+            
+            function selectBlock(block) {
+                // Deselect previous block
+                if (selectedBlock) {
+                    selectedBlock.style.boxShadow = '';
+                }
+                
+                selectedBlock = block;
+                
+                if (block) {
+                    // Highlight selected block
+                    block.style.boxShadow = '0 0 10px rgba(52, 152, 219, 0.7)';
+                    
+                    // Update properties panel
+                    updateBlockProperties(block);
+                } else {
+                    // Reset properties panel to default
+                    resetPropertiesPanel();
+                }
+            }
+            
+            function resetPropertiesPanel() {
+                // Get the last property group which is our block-specific group
+                const propertyGroups = propertiesContent.querySelectorAll('.property-group');
+                if (propertyGroups.length > 2) {
+                    propertyGroups[propertyGroups.length - 1].innerHTML = `
+                        <div class="property-label">Select an element to view its properties</div>
+                    `;
+                }
+            }
+            
+            function updateBlockProperties(block) {
+                // Get the last property group which is our block-specific group
+                const propertyGroups = propertiesContent.querySelectorAll('.property-group');
+                let blockPropertyGroup;
+                
+                if (propertyGroups.length > 2) {
+                    blockPropertyGroup = propertyGroups[propertyGroups.length - 1];
+                    blockPropertyGroup.innerHTML = ''; // Clear it
+                } else {
+                    blockPropertyGroup = document.createElement('div');
+                    blockPropertyGroup.className = 'property-group';
+                    propertiesContent.appendChild(blockPropertyGroup);
+                }
+                
+                // Fill with properties
+                blockPropertyGroup.innerHTML = `
+                    <div class="property-label">Block Properties</div>
+                    <div style="margin-bottom: 8px;">
+                        <span class="property-label">Type:</span>
+                        <input type="text" class="property-input" value="${formatBlockType(block.dataset.type)}" readonly>
+                    </div>
+                    <div style="margin-bottom: 8px;">
+                        <span class="property-label">Name:</span>
+                        <input type="text" id="block-name" class="property-input" value="${block.dataset.name}">
+                    </div>
+                    <div style="margin-bottom: 8px;">
+                        <span class="property-label">ID:</span>
+                        <input type="text" class="property-input" value="${block.id}" readonly>
+                    </div>
+                    <div style="margin-bottom: 8px;">
+                        <span class="property-label">Description:</span>
+                        <textarea id="block-description" class="property-textarea">${block.dataset.description}</textarea>
+                    </div>
+                `;
+                
+                // Add specific fields based on block type
+                if (block.dataset.type === 'function-block' || block.dataset.type === 'function') {
+                    blockPropertyGroup.innerHTML += `
+                        <div style="margin-bottom: 8px;">
+                            <span class="property-label">Parameters:</span>
+                            <textarea id="block-parameters" class="property-textarea">${block.dataset.parameters || ''}</textarea>
+                        </div>
+                    `;
+                }
+                
+                if (block.dataset.type === 'data-block') {
+                    blockPropertyGroup.innerHTML += `
+                        <div style="margin-bottom: 8px;">
+                            <span class="property-label">Variables:</span>
+                            <textarea id="block-variables" class="property-textarea">${block.dataset.variables || ''}</textarea>
+                        </div>
+                    `;
+                }
+                
+                if (block.dataset.type === 'hardware') {
+                    blockPropertyGroup.innerHTML += `
+                        <div style="margin-bottom: 8px;">
+                            <span class="property-label">Model:</span>
+                            <input type="text" id="block-model" class="property-input" value="${block.dataset.model || ''}">
+                        </div>
+                        <div style="margin-bottom: 8px;">
+                            <span class="property-label">Address/ID:</span>
+                            <input type="text" id="block-address" class="property-input" value="${block.dataset.address || ''}">
+                        </div>
+                    `;
+                }
+                
+                // Add update and delete buttons
+                blockPropertyGroup.innerHTML += `
+                    <div class="button-row">
+                        <button id="update-block" class="action-button">Update</button>
+                        <button id="delete-block" class="action-button danger-button">Delete</button>
+                    </div>
+                `;
+                
+                // Add event listeners to buttons
+                document.getElementById('update-block').addEventListener('click', function() {
+                    const name = document.getElementById('block-name').value;
+                    const description = document.getElementById('block-description').value;
+                    
+                    block.dataset.name = name;
+                    block.dataset.description = description;
+                    
+                    // Update specific fields
+                    if (block.dataset.type === 'function-block' || block.dataset.type === 'function') {
+                        block.dataset.parameters = document.getElementById('block-parameters').value;
+                    }
+                    
+                    if (block.dataset.type === 'data-block') {
+                        block.dataset.variables = document.getElementById('block-variables').value;
+                    }
+                    
+                    if (block.dataset.type === 'hardware') {
+                        block.dataset.model = document.getElementById('block-model').value;
+                        block.dataset.address = document.getElementById('block-address').value;
+                    }
+                    
+                    // Update block display
+                    block.querySelector('.block-title').textContent = name;
+                    block.querySelector('.block-description').textContent = description;
+                    
+                    alert('Block properties updated!');
+                });
+                
+                document.getElementById('delete-block').addEventListener('click', function() {
+                    deleteBlock(block);
+                });
+            }
+            
+            function deleteBlock(block) {
+                if (confirm('Delete this block?')) {
+                    // Remove all connections to this block
+                    connections = connections.filter(conn => {
+                        if (conn.startBlock === block || conn.endBlock === block) {
+                            if (conn.line) conn.line.remove();
+                            if (conn.arrow) conn.arrow.remove();
+                            if (conn.label) conn.label.remove();
+                            return false;
+                        }
+                        return true;
+                    });
+                    
+                    // Remove block from array
+                    blocks = blocks.filter(b => b !== block);
+                    
+                    // Remove from DOM
+                    block.remove();
+                    
+                    // Clear selection
+                    selectBlock(null);
+                    
+                    // Update mini-map
+                    updateMiniMap();
+                }
+            }
+            
+            function moveBlock(block, x, y) {
+                block.style.left = `${x}px`;
+                block.style.top = `${y}px`;
+            }
+            
+            function createConnection(startPort, endPort) {
+                const startBlock = startPort.closest('.block');
+                const endBlock = endPort.closest('.block');
+                
+                // Prevent connecting a block to itself
+                if (startBlock === endBlock) {
+                    return;
+                }
+                
+                // Prevent duplicate connections
+                const isDuplicate = connections.some(conn => 
+                    (conn.startPort === startPort && conn.endPort === endPort) ||
+                    (conn.startPort === endPort && conn.endPort === startPort)
+                );
+                
+                if (isDuplicate) {
+                    return;
+                }
+                
+                const line = document.createElement('div');
+                line.className = 'connector-line';
+                workspace.appendChild(line);
+                
+                const arrow = document.createElement('div');
+                arrow.className = 'connector-arrow';
+                workspace.appendChild(arrow);
+                
+                const label = document.createElement('div');
+                label.className = 'connection-label';
+                label.textContent = 'Data';
+                workspace.appendChild(label);
+                
+                // Make label editable on click
+                label.addEventListener('click', function() {
+                    const newText = prompt('Connection type/description:', this.textContent);
+                    if (newText !== null) {
+                        this.textContent = newText;
+                    }
+                });
+                
+                const connection = {
+                    startBlock,
+                    endBlock,
+                    startPort,
+                    endPort,
+                    line,
+                    arrow,
+                    label,
+                    type: 'Data'
+                };
+                
+                connections.push(connection);
+                updateConnections();
+            }
+            
+            function updateConnections() {
+                connections.forEach(conn => {
+                    const startRect = conn.startPort.getBoundingClientRect();
+                    const endRect = conn.endPort.getBoundingClientRect();
+                    const workspaceRect = workspace.getBoundingClientRect();
+                    
+                    // Adjust for scale and offset
+                    const startX = (startRect.left + startRect.width/2 - workspaceRect.left) / scale;
+                    const startY = (startRect.top + startRect.height/2 - workspaceRect.top) / scale;
+                    const endX = (endRect.left + endRect.width/2 - workspaceRect.left) / scale;
+                    const endY = (endRect.top + endRect.height/2 - workspaceRect.top) / scale;
+                    
+                    drawLine(conn, startX, startY, endX, endY);
+                    
+                    // Position the label at midpoint
+                    const midX = (startX + endX) / 2;
+                    const midY = (startY + endY) / 2;
+                    
+                    conn.label.style.left = `${midX}px`;
+                    conn.label.style.top = `${midY}px`;
+                });
+            }
+            
+            function drawLine(connection, x1, y1, x2, y2) {
+                const line = connection.line || connection; // Handle both connections and temp lines
+                const arrow = connection.arrow || connection.arrow;
+                
+                // Calculate line length and angle
+                const length = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+                const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+                
+                // Position line
+                line.style.width = `${length}px`;
+                line.style.height = '2px';
+                line.style.position = 'absolute';
+                line.style.left = `${x1}px`;
+                line.style.top = `${y1}px`;
+                line.style.transformOrigin = '0 0';
+                line.style.transform = `rotate(${angle}deg)`;
+                
+                // Position arrow at the end
+                if (arrow) {
+                    arrow.style.position = 'absolute';
+                    arrow.style.left = `${x2 - 10}px`;
+                    arrow.style.top = `${y2 - 6}px`;
+                    arrow.style.transform = `rotate(${angle}deg)`;
+                }
+            }
+            
+            function saveDesign() {
+                const design = {
+                    projectInfo: projectData,
+                    blocks: blocks.map(block => ({
+                        id: block.id,
+                        type: block.dataset.type,
+                        name: block.dataset.name,
+                        description: block.dataset.description,
+                        x: parseFloat(block.style.left),
+                        y: parseFloat(block.style.top),
+                        zIndex: parseInt(block.style.zIndex) || 1,
+                        parameters: block.dataset.parameters || '',
+                        variables: block.dataset.variables || '',
+                        model: block.dataset.model || '',
+                        address: block.dataset.address || ''
+                    })),
+                    connections: connections.map(conn => ({
+                        startBlock: conn.startBlock.id,
+                        endBlock: conn.endBlock.id,
+                        startPort: conn.startPort.dataset.port,
+                        endPort: conn.endPort.dataset.port,
+                        label: conn.label.textContent
+                    })),
+                    nextId
+                };
+                
+                const json = JSON.stringify(design, null, 2);
+                localStorage.setItem('plcStructureDesign', json);
+                
+                // Also provide a download option
+                const blob = new Blob([json], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'plc_structure_design.json';
+                a.click();
+                URL.revokeObjectURL(url);
+                
+                alert('Design saved!');
+            }
+            
+            function loadDesign() {
+                // Try to load from localStorage
+                let json = localStorage.getItem('plcStructureDesign');
+                
+                // If not found, prompt for file upload
+                if (!json) {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = '.json';
+                    input.onchange = function(e) {
+                        const file = e.target.files[0];
+                        if (file) {
+                            const reader = new FileReader();
+                            reader.onload = function(e) {
+                                try {
+                                    loadDesignFromJson(e.target.result);
+                                } catch (err) {
+                                    alert('Error loading design: ' + err.message);
+                                }
+                            };
+                            reader.readAsText(file);
+                        }
+                    };
+                    input.click();
+                    return;
+                }
+                
+                try {
+                    loadDesignFromJson(json);
+                } catch (err) {
+                    alert('Error loading design: ' + err.message);
+                }
+            }
+            
+            function loadDesignFromJson(json) {
+                clearWorkspace();
+                
+                const design = JSON.parse(json);
+                
+                // Load project info
+                if (design.projectInfo) {
+                    projectData = design.projectInfo;
+                    document.getElementById('project-name').value = projectData.name || '';
+                    document.getElementById('project-author').value = projectData.author || '';
+                    document.getElementById('project-date').value = projectData.date || '';
+                    document.getElementById('project-description').value = projectData.description || '';
+                    document.getElementById('plc-type').value = projectData.plcType || 'Siemens S7-1200';
+                    document.getElementById('plc-software').value = projectData.plcSoftware || 'TIA Portal V17';
+                    projectNotes.value = projectData.notes || '';
+                }
+                
+                // Create blocks
+                design.blocks.forEach(blockData => {
+                    const block = document.createElement('div');
+                    block.className = `block ${blockData.type}`;
+                    block.id = blockData.id;
+                    block.dataset.type = blockData.type;
+                    block.dataset.name = blockData.name;
+                    block.dataset.description = blockData.description;
+                    
+                    // Set additional properties if they exist
+                    if (blockData.parameters) block.dataset.parameters = blockData.parameters;
+                    if (blockData.variables) block.dataset.variables = blockData.variables;
+                    if (blockData.model) block.dataset.model = blockData.model;
+                    if (blockData.address) block.dataset.address = blockData.address;
+                    
+                    block.innerHTML = `
+                        <div class="block-type">${formatBlockType(blockData.type)}</div>
+                        <div class="block-title">${blockData.name}</div>
+                        <div class="block-description">${blockData.description}</div>
+                        <div class="block-id">#${blockData.id.split('-')[1]}</div>
+                        <div class="block-ports">
+                            <div class="port port-in" data-port="in"></div>
+                            <div class="port port-out" data-port="out"></div>
+                        </div>
+                    `;
+                    
+                    block.style.left = `${blockData.x}px`;
+                    block.style.top = `${blockData.y}px`;
+                    block.style.zIndex = blockData.zIndex || 1;
+                    
+                    workspace.appendChild(block);
+                    blocks.push(block);
+                    
+                    // Add event listeners
+                    block.addEventListener('mousedown', function(e) {
+                        if (!e.target.classList.contains('port')) {
+                            selectBlock(block);
+                            isDragging = true;
+                            e.preventDefault();
+                        }
+                    });
+                    
+                    block.addEventListener('contextmenu', function(e) {
+                        e.preventDefault();
+                        selectBlock(block);
+                        showContextMenu(e.clientX, e.clientY);
+                    });
+                    
+                    block.querySelectorAll('.port').forEach(port => {
+                        port.addEventListener('mousedown', function(e) {
+                            e.stopPropagation();
+                            startPort = port;
+                            isConnecting = true;
+                        });
+                        
+                        // Add tooltips
+                        port.addEventListener('mouseover', function() {
+                            if (port.classList.contains('port-in')) {
+                                showTooltip(port, 'Input Port - Drag from here to create a connection');
+                            } else {
+                                showTooltip(port, 'Output Port - Drag from here to create a connection');
+                            }
+                        });
+                        
+                        port.addEventListener('mouseout', function() {
+                            hideTooltip();
+                        });
+                    });
+                });
+                
+                // Create connections
+                design.connections.forEach(connData => {
+                    const startBlock = document.getElementById(connData.startBlock);
+                    const endBlock = document.getElementById(connData.endBlock);
+                    
+                    if (startBlock && endBlock) {
+                        const startPort = startBlock.querySelector(`.port[data-port="${connData.startPort}"]`);
+                        const endPort = endBlock.querySelector(`.port[data-port="${connData.endPort}"]`);
+                        
+                        if (startPort && endPort) {
+                            const line = document.createElement('div');
+                            line.className = 'connector-line';
+                            workspace.appendChild(line);
+                            
+                            const arrow = document.createElement('div');
+                            arrow.className = 'connector-arrow';
+                            workspace.appendChild(arrow);
+                            
+                            const label = document.createElement('div');
+                            label.className = 'connection-label';
+                            label.textContent = connData.label || 'Data';
+                            workspace.appendChild(label);
+                            
+                            // Make label editable on click
+                            label.addEventListener('click', function() {
+                                const newText = prompt('Connection type/description:', this.textContent);
+                                if (newText !== null) {
+                                    this.textContent = newText;
+                                }
+                            });
+                            
+                            const connection = {
+                                startBlock,
+                                endBlock,
+                                startPort,
+                                endPort,
+                                line,
+                                arrow,
+                                label
+                            };
+                            
+                            connections.push(connection);
+                        }
+                    }
+                });
+                
+                updateConnections();
+                
+                // Set nextId to continue from highest existing id
+                nextId = design.nextId || Math.max(...blocks.map(b => parseInt(b.id.split('-')[1]))) + 1 || 1;
+                
+                updateMiniMap();
+                alert('Design loaded!');
+            }
+            
+            function clearWorkspace() {
+                // Remove all blocks
+                blocks.forEach(block => block.remove());
+                blocks = [];
+                
+                // Remove all connections
+                connections.forEach(conn => {
+                    if (conn.line) conn.line.remove();
+                    if (conn.arrow) conn.arrow.remove();
+                    if (conn.label) conn.label.remove();
+                });
+                connections = [];
+                
+                // Reset selection and counter
+                selectedBlock = null;
+                nextId = 1;
+                
+                // Reset view
+                scale = 1;
+                offsetX = 0;
+                offsetY = 0;
+                updateZoom();
+                
+                // Reset project info to defaults
+                projectData = {
+                    name: 'New PLC Project',
+                    author: '',
+                    date: new Date().toISOString().split('T')[0],
+                    description: '',
+                    plcType: 'Siemens S7-1200',
+                    plcSoftware: 'TIA Portal V17',
+                    notes: ''
+                };
+                
+                document.getElementById('project-name').value = projectData.name;
+                document.getElementById('project-author').value = projectData.author;
+                document.getElementById('project-date').value = projectData.date;
+                document.getElementById('project-description').value = projectData.description;
+                document.getElementById('plc-type').value = projectData.plcType;
+                document.getElementById('plc-software').value = projectData.plcSoftware;
+                projectNotes.value = projectData.notes;
+                
+                resetPropertiesPanel();
+                updateMiniMap();
+            }
+            
+            function exportDesign() {
+                // Create a documentation object
+                const doc = {
+                    projectName: projectData.name,
+                    author: projectData.author,
+                    date: projectData.date,
+                    description: projectData.description,
+                    plcInfo: {
+                        type: projectData.plcType,
+                        software: projectData.plcSoftware
+                    },
+                    notes: projectData.notes,
+                    programStructure: {
+                        blocks: blocks.map(block => ({
+                            id: block.id,
+                            type: formatBlockType(block.dataset.type),
+                            name: block.dataset.name,
+                            description: block.dataset.description,
+                            parameters: block.dataset.parameters,
+                            variables: block.dataset.variables,
+                            model: block.dataset.model,
+                            address: block.dataset.address
+                        })),
+                        connections: connections.map(conn => ({
+                            from: conn.startBlock.dataset.name,
+                            to: conn.endBlock.dataset.name,
+                            type: conn.label.textContent
+                        }))
+                    }
+                };
+                
+                // Create a formatted JSON document
+                const json = JSON.stringify(doc, null, 2);
+                
+                // Create a downloadable text file
+                const blob = new Blob([json], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${projectData.name.replace(/\s+/g, '_')}_documentation.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                
+                alert('Documentation exported!');
+            }
+            
+            function updateZoom() {
+                workspace.style.transform = `scale(${scale})`;
+                workspace.style.transformOrigin = '0 0';
+                updateConnections();
+                updateMiniMap();
+            }
+            
+            function updateMiniMap() {
+                if (miniMap.style.display === 'none') return;
+                
+                // Clear previous content
+                miniMapContent.innerHTML = '';
+                
+                // Calculate boundary
+                let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+                
+                blocks.forEach(block => {
+                    const x = parseFloat(block.style.left);
+                    const y = parseFloat(block.style.top);
+                    const width = block.offsetWidth;
+                    const height = block.offsetHeight;
+                    
+                    minX = Math.min(minX, x);
+                    minY = Math.min(minY, y);
+                    maxX = Math.max(maxX, x + width);
+                    maxY = Math.max(maxY, y + height);
+                });
+                
+                // If no blocks, set default values
+                if (minX === Infinity) {
+                    minX = 0;
+                    minY = 0;
+                    maxX = workspace.clientWidth;
+                    maxY = workspace.clientHeight;
+                }
+                
+                // Add some padding
+                minX -= 50;
+                minY -= 50;
+                maxX += 50;
+                maxY += 50;
+                
+                const contentWidth = maxX - minX;
+                const contentHeight = maxY - minY;
+                
+                // Calculate scale for mini-map
+                const mapScale = Math.min(
+                    miniMap.clientWidth / contentWidth,
+                    miniMap.clientHeight / contentHeight
+                ) * 0.9;
+                
+                // Set transform for mini-map content
+                miniMapContent.style.transform = `scale(${mapScale})`;
+                miniMapContent.style.transformOrigin = '0 0';
+                
+                // Create mini blocks
+                blocks.forEach(block => {
+                    const miniBlock = document.createElement('div');
+                    miniBlock.style.position = 'absolute';
+                    miniBlock.style.left = `${parseFloat(block.style.left) - minX}px`;
+                    miniBlock.style.top = `${parseFloat(block.style.top) - minY}px`;
+                    miniBlock.style.width = `${block.offsetWidth}px`;
+                    miniBlock.style.height = `${block.offsetHeight}px`;
+                    miniBlock.style.backgroundColor = block.style.backgroundColor || window.getComputedStyle(block).backgroundColor;
+                    miniBlock.style.borderLeft = block.style.borderLeft || window.getComputedStyle(block).borderLeft;
+                    miniBlock.style.borderRadius = '2px';
+                    
+                    miniMapContent.appendChild(miniBlock);
+                });
+                
+                // Create mini connections
+                connections.forEach(conn => {
+                    const startRect = conn.startPort.getBoundingClientRect();
+                    const endRect = conn.endPort.getBoundingClientRect();
+                    const workspaceRect = workspace.getBoundingClientRect();
+                    
+                    const startX = (startRect.left + startRect.width/2 - workspaceRect.left) / scale - minX;
+                    const startY = (startRect.top + startRect.height/2 - workspaceRect.top) / scale - minY;
+                    const endX = (endRect.left + endRect.width/2 - workspaceRect.left) / scale - minX;
+                    const endY = (endRect.top + endRect.height/2 - workspaceRect.top) / scale - minY;
+                    
+                    const miniLine = document.createElement('div');
+                    miniLine.style.position = 'absolute';
+                    miniLine.style.backgroundColor = '#555';
+                    miniLine.style.height = '1px';
+                    miniLine.style.transformOrigin = '0 0';
+                    
+                    // Calculate length and angle
+                    const length = Math.sqrt((endX - startX) ** 2 + (endY - startY) ** 2);
+                    const angle = Math.atan2(endY - startY, endX - startX) * 180 / Math.PI;
+                    
+                    miniLine.style.width = `${length}px`;
+                    miniLine.style.left = `${startX}px`;
+                    miniLine.style.top = `${startY}px`;
+                    miniLine.style.transform = `rotate(${angle}deg)`;
+                    
+                    miniMapContent.appendChild(miniLine);
+                });
+                
+                // Update viewport indicator
+                const viewportLeft = -offsetX / scale - minX;
+                const viewportTop = -offsetY / scale - minY;
+                const viewportWidth = workspace.clientWidth / scale;
+                const viewportHeight = workspace.clientHeight / scale;
+                
+                miniMapViewport.style.left = `${viewportLeft * mapScale}px`;
+                miniMapViewport.style.top = `${viewportTop * mapScale}px`;
+                miniMapViewport.style.width = `${viewportWidth * mapScale}px`;
+                miniMapViewport.style.height = `${viewportHeight * mapScale}px`;
+            }
+            
+            function showHelp() {
+                alert(
+                    'PLC Program Structure Designer Help:\n\n' +
+                    '1. Drag blocks from the left panel to create your program structure\n' +
+                    '2. Connect blocks by dragging from one port to another\n' +
+                    '3. Click on any block to edit its properties\n' +
+                    '4. Right-click on blocks for additional options\n' +
+                    '5. Use the zoom controls to navigate large designs\n' +
+                    '6. Save your work regularly using the Save button\n\n' +
+                    'This tool helps you plan and document the high-level structure of your PLC program before implementation.'
+                );
+            }
+            
+            function showTooltip(element, text) {
+                const rect = element.getBoundingClientRect();
+                tooltip.textContent = text;
+                tooltip.style.left = `${rect.left + rect.width / 2}px`;
+                tooltip.style.top = `${rect.top - 30}px`;
+                tooltip.style.opacity = '1';
+            }
+            
+            function hideTooltip() {
+                tooltip.style.opacity = '0';
+            }
+            
+            function showContextMenu(x, y) {
+                contextMenu.style.display = 'block';
+                contextMenu.style.left = `${x}px`;
+                contextMenu.style.top = `${y}px`;
+                
+                // Ensure menu stays within viewport
+                const rect = contextMenu.getBoundingClientRect();
+                if (rect.right > window.innerWidth) {
+                    contextMenu.style.left = `${x - rect.width}px`;
+                }
+                if (rect.bottom > window.innerHeight) {
+                    contextMenu.style.top = `${y - rect.height}px`;
+                }
+            }
+            
+            function hideContextMenu() {
+                contextMenu.style.display = 'none';
+            }
+            
+            // Additional event listeners
+            document.addEventListener('mouseup', function() {
+                isDragging = false;
+                isConnecting = false;
+                
+                if (tempConnection) {
+                    tempConnection.remove();
+                    if (tempConnection.arrow) {
+                        tempConnection.arrow.remove();
+                    }
+                    tempConnection = null;
+                }
+            });
+            
+            document.addEventListener('click', function(e) {
+                if (e.target !== contextMenu && !contextMenu.contains(e.target)) {
+                    hideContextMenu();
+                }
+            });
+            
+            window.addEventListener('resize', function() {
+                updateConnections();
+                updateMiniMap();
+            });
+            
+            // Initialize with current date
+            document.getElementById('project-date').value = new Date().toISOString().split('T')[0];
+            
+            // Show instructions when first loaded
+            setTimeout(function() {
+                alert('Welcome to PLC Program Structure Designer!\n\nThis tool helps you create high-level diagrams of your PLC program structure.\n\nGet started by dragging program blocks from the left panel onto the workspace.');
+            }, 500);
+        });
+    </script>
+</body>
+</html>
