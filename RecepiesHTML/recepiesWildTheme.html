@@ -1,0 +1,2086 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mina Favoritrecept - Wild Theme</title>
+  <style>
+    /* === WILD THEME VARIABLES === */
+    :root {
+      /* Base Colors */
+      --primary-color: #3A8153;      /* Forest Green */
+      --secondary-color: #8D5E2A;    /* Earthy Brown */
+      --text-color: #333333;
+      --bg-color: #F7F3E9;           /* Creamy Background */
+      --card-bg: #FFFFFF;
+      --border-color: #E0D7C2;       /* Natural Border */
+      --shadow-color: rgba(0,0,0,0.1);
+      --accent-color: #D08C26;       /* Golden Accent */
+      --success-color: #5D9C59;
+      --error-color: #D87272;
+      --tag-bg: #EAE2D6;
+      --tag-text: #8D5E2A;
+      --sidebar-width: 280px;
+
+      /* Wild Theme Specific */
+      --header-bg: #3A8153;
+      --header-text: #FFFFFF;
+      --recipe-hover: #F1EBD9;
+      --btn-hover: #2D6A40;
+      --form-focus: #D9AD4E;
+      --recipe-number-bg: #D08C26;
+      --divider-color: #E0D7C2;
+      
+      /* Typography */
+      --heading-font: 'Montserrat', sans-serif;
+      --body-font: 'Open Sans', sans-serif;
+      
+      /* Components */
+      --border-radius: 10px;
+      --card-border-radius: 12px;
+      --btn-border-radius: 24px;
+      --input-border-radius: 8px;
+    }
+
+    /* Dark Wild Theme */
+    .dark-theme {
+      --primary-color: #5B9B6D;      /* Lighter Forest Green */
+      --secondary-color: #BD8952;    /* Lighter Brown */
+      --text-color: #E1DFD8;
+      --bg-color: #2C2922;           /* Dark Earthy Background */
+      --card-bg: #3E3A30;            /* Dark Card */
+      --border-color: #52493C;       /* Dark Natural Border */
+      --shadow-color: rgba(0,0,0,0.3);
+      --accent-color: #E8A134;       /* Brighter Gold */
+      --tag-bg: #52493C;
+      --tag-text: #E8A134;
+      
+      /* Wild Theme Specific - Dark */
+      --header-bg: #3C664D;
+      --recipe-hover: #4D4639;
+      --btn-hover: #4A8860;
+      --form-focus: #E8A134;
+      --recipe-number-bg: #BD8952;
+      --divider-color: #52493C;
+    }
+
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Open+Sans:wght@300;400;600&display=swap');
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: var(--body-font);
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      line-height: 1.6;
+      transition: background-color 0.3s, color 0.3s;
+      background-image: url('data:image/svg+xml,%3Csvg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"%3E%3Cpath d="M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z" fill="%23${encodeURIComponent('3a8153').substring(1)}10" fill-rule="evenodd"/%3E%3C/svg%3E');
+      background-attachment: fixed;
+    }
+
+    .dark-theme body {
+      background-image: url('data:image/svg+xml,%3Csvg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"%3E%3Cpath d="M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z" fill="%23${encodeURIComponent('5B9B6D').substring(1)}10" fill-rule="evenodd"/%3E%3C/svg%3E');
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    /* === HEADER STYLING === */
+    header {
+      background-color: var(--header-bg);
+      padding: 15px;
+      border-radius: var(--border-radius);
+      margin-bottom: 25px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    .site-title {
+      color: var(--header-text);
+      font-family: var(--heading-font);
+      font-weight: 700;
+      font-size: 1.8rem;
+      margin: 0;
+    }
+
+    .header-buttons {
+      display: flex;
+      gap: 10px;
+    }
+
+    .header-btn {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: var(--btn-border-radius);
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      backdrop-filter: blur(2px);
+    }
+
+    .header-btn:hover {
+      background-color: rgba(255, 255, 255, 0.3);
+      transform: translateY(-2px);
+    }
+
+    #fileInput {
+      display: none;
+    }
+
+    /* === TABS STYLING === */
+    .tabs-container {
+      margin-bottom: 25px;
+    }
+
+    .tab-buttons {
+      display: flex;
+      margin-bottom: 20px;
+      border-bottom: 2px solid var(--divider-color);
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      gap: 5px;
+      padding-bottom: 2px;
+    }
+
+    .tab-buttons::-webkit-scrollbar {
+      display: none;
+    }
+
+    .tab-btn {
+      background: none;
+      color: var(--text-color);
+      border: none;
+      padding: 12px 20px;
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 500;
+      opacity: 0.7;
+      white-space: nowrap;
+      position: relative;
+      transition: all 0.2s ease;
+      font-family: var(--heading-font);
+    }
+
+    .tab-btn:hover {
+      opacity: 0.9;
+    }
+
+    .tab-btn.active {
+      opacity: 1;
+      font-weight: 600;
+    }
+
+    .tab-btn.active::after {
+      content: '';
+      position: absolute;
+      bottom: -3px;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background-color: var(--primary-color);
+      border-radius: 2px 2px 0 0;
+    }
+
+    .tab-content {
+      display: none;
+      background-color: var(--card-bg);
+      padding: 25px;
+      border-radius: var(--card-border-radius);
+      box-shadow: 0 6px 15px var(--shadow-color);
+    }
+
+    .tab-content.active {
+      display: block;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* === RECIPES LAYOUT === */
+    .recipes-layout {
+      display: grid;
+      grid-template-columns: var(--sidebar-width) 1fr;
+      gap: 25px;
+      height: calc(100vh - 220px);
+      min-height: 550px;
+    }
+
+    .recipes-sidebar {
+      background-color: var(--card-bg);
+      border-radius: var(--card-border-radius);
+      box-shadow: 0 6px 15px var(--shadow-color);
+      overflow-y: auto;
+      height: 100%;
+      -webkit-overflow-scrolling: touch;
+      border-left: 4px solid var(--primary-color);
+    }
+
+    .recipes-list {
+      list-style-type: none;
+    }
+
+    .recipe-list-item {
+      padding: 15px;
+      border-bottom: 1px solid var(--divider-color);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      transition: all 0.2s ease;
+    }
+
+    .recipe-list-item:hover {
+      background-color: var(--recipe-hover);
+    }
+
+    .recipe-list-item.active {
+      background-color: var(--primary-color);
+      color: white;
+    }
+
+    .recipe-number {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      background-color: var(--recipe-number-bg);
+      color: white;
+      border-radius: 50%;
+      text-align: center;
+      margin-right: 12px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      flex-shrink: 0;
+    }
+
+    .recipe-list-item.active .recipe-number {
+      background-color: white;
+      color: var(--primary-color);
+    }
+
+    .recipe-list-text {
+      font-weight: 500;
+    }
+
+    .recipe-content {
+      background-color: var(--card-bg);
+      border-radius: var(--card-border-radius);
+      box-shadow: 0 6px 15px var(--shadow-color);
+      padding: 30px;
+      overflow-y: auto;
+      height: 100%;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* === COMPACT RECIPE STYLING === */
+    .compact-recipe {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .compact-recipe h2 {
+      color: var(--primary-color);
+      margin-bottom: 10px;
+      font-size: 2rem;
+      font-weight: 700;
+      font-family: var(--heading-font);
+      position: relative;
+      display: inline-block;
+    }
+
+    .compact-recipe h2::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      bottom: -5px;
+      width: 60px;
+      height: 3px;
+      background-color: var(--accent-color);
+      border-radius: 3px;
+    }
+
+    .compact-meta {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      margin: 25px 0;
+      font-size: 0.95rem;
+      flex-wrap: wrap;
+    }
+
+    .meta-item {
+      display: flex;
+      align-items: center;
+      color: var(--secondary-color);
+      font-weight: 600;
+    }
+
+    .meta-icon {
+      margin-right: 8px;
+      font-size: 1.2rem;
+    }
+
+    .compact-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .edit-btn, .delete-btn {
+      padding: 8px 15px;
+      border-radius: var(--btn-border-radius);
+      font-size: 0.9rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.2s ease;
+    }
+
+    .edit-btn {
+      background-color: var(--accent-color);
+      color: white;
+    }
+
+    .edit-btn:hover {
+      background-color: #BC7D22;
+    }
+
+    .delete-btn {
+      background-color: var(--error-color);
+      color: white;
+    }
+
+    .delete-btn:hover {
+      background-color: #C26161;
+    }
+
+    .recipe-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 25px;
+    }
+
+    .tag {
+      background-color: var(--tag-bg);
+      color: var(--tag-text);
+      padding: 6px 12px;
+      border-radius: 30px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .tag:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 3px 5px rgba(0,0,0,0.1);
+    }
+
+    .tag::before {
+      content: '#';
+      margin-right: 3px;
+      opacity: 0.7;
+    }
+
+    .compact-section {
+      margin-bottom: 30px;
+      background-color: rgba(255, 255, 255, 0.5);
+      padding: 20px;
+      border-radius: var(--border-radius);
+      position: relative;
+      border-left: 3px solid var(--accent-color);
+    }
+
+    .dark-theme .compact-section {
+      background-color: rgba(0, 0, 0, 0.2);
+    }
+
+    .compact-section h3 {
+      color: var(--secondary-color);
+      margin-bottom: 15px;
+      font-size: 1.3rem;
+      font-weight: 600;
+      font-family: var(--heading-font);
+      display: flex;
+      align-items: center;
+    }
+
+    .section-icon {
+      margin-right: 10px;
+      color: var(--accent-color);
+    }
+
+    .compact-ingredients {
+      list-style-type: none;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+      gap: 12px;
+    }
+
+    .compact-ingredients li {
+      position: relative;
+      padding-left: 25px;
+      transition: transform 0.2s ease;
+    }
+
+    .compact-ingredients li:hover {
+      transform: translateX(3px);
+    }
+
+    .compact-ingredients li::before {
+      content: "•";
+      position: absolute;
+      left: 0;
+      color: var(--accent-color);
+      font-weight: bold;
+      font-size: 1.5rem;
+      line-height: 1;
+    }
+
+    .compact-instructions {
+      padding-left: 10px;
+      counter-reset: step-counter;
+    }
+
+    .compact-instructions li {
+      margin-bottom: 18px;
+      position: relative;
+      padding-left: 40px;
+    }
+
+    .compact-instructions li::before {
+      counter-increment: step-counter;
+      content: counter(step-counter);
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 28px;
+      height: 28px;
+      background-color: var(--primary-color);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .compact-source {
+      font-style: italic;
+      margin-top: 30px;
+      font-size: 0.9rem;
+      padding: 15px;
+      background-color: rgba(0, 0, 0, 0.03);
+      border-radius: var(--border-radius);
+    }
+
+    .dark-theme .compact-source {
+      background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .compact-source a {
+      color: var(--accent-color);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .compact-source a:hover {
+      text-decoration: underline;
+    }
+
+    .no-recipe-selected {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      align-items: center;
+      justify-content: center;
+      color: var(--border-color);
+      font-size: 1.2rem;
+      text-align: center;
+      opacity: 0.8;
+    }
+
+    .no-recipe-icon {
+      font-size: 3rem;
+      margin-bottom: 15px;
+      color: var(--primary-color);
+      opacity: 0.5;
+    }
+
+    /* === FORM STYLING === */
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: var(--secondary-color);
+    }
+
+    input[type="text"],
+    input[type="number"],
+    textarea,
+    select {
+      width: 100%;
+      padding: 14px 16px;
+      border: 2px solid var(--border-color);
+      border-radius: var(--input-border-radius);
+      font-size: 1rem;
+      background-color: var(--card-bg);
+      color: var(--text-color);
+      transition: all 0.2s ease;
+      font-family: var(--body-font);
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+      outline: none;
+      border-color: var(--form-focus);
+      box-shadow: 0 0 0 3px rgba(208, 140, 38, 0.2);
+    }
+
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+      line-height: 1.5;
+    }
+
+    .ingredient-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .ingredient-row button {
+      padding: 8px;
+      border-radius: var(--input-border-radius);
+      flex-shrink: 0;
+    }
+
+    .add-more-btn {
+      background: var(--accent-color);
+      color: white;
+      border: none;
+      padding: 10px 18px;
+      border-radius: var(--btn-border-radius);
+      cursor: pointer;
+      font-size: 0.95rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+      font-weight: 500;
+    }
+
+    .add-more-btn:hover {
+      background-color: #BC7D22;
+      transform: translateY(-2px);
+    }
+
+    .url-form-container {
+      max-width: 700px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .url-form-container h2 {
+      margin-bottom: 15px;
+      color: var(--primary-color);
+      font-size: 2rem;
+      font-weight: 700;
+      font-family: var(--heading-font);
+    }
+
+    .url-form-container p {
+      margin-bottom: 25px;
+      color: var(--secondary-color);
+      font-size: 1.1rem;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .url-form-container .form-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 30px;
+    }
+
+    .url-example {
+      text-align: left;
+      background-color: rgba(0, 0, 0, 0.03);
+      padding: 20px 25px;
+      border-radius: var(--border-radius);
+      margin: 30px 0;
+      font-size: 0.95rem;
+      border-left: 4px solid var(--accent-color);
+    }
+
+    .dark-theme .url-example {
+      background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .url-example p {
+      font-weight: 600;
+      margin-bottom: 10px;
+      color: var(--text-color);
+    }
+
+    .url-example ul {
+      padding-left: 20px;
+    }
+
+    .url-example li {
+      margin-bottom: 8px;
+    }
+
+    button {
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      padding: 14px 24px;
+      border-radius: var(--btn-border-radius);
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    button:hover {
+      background-color: var(--btn-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    .search-filter-section {
+      margin-bottom: 25px;
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+
+    .search-bar {
+      flex: 1;
+      min-width: 200px;
+      position: relative;
+    }
+
+    .search-bar input {
+      padding-left: 45px;
+      height: 50px;
+      border-radius: 25px;
+      background-color: rgba(255, 255, 255, 0.7);
+      border: 2px solid var(--border-color);
+    }
+
+    .dark-theme .search-bar input {
+      background-color: rgba(0, 0, 0, 0.2);
+    }
+
+    .search-bar input:focus {
+      background-color: var(--card-bg);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--secondary-color);
+      font-size: 1.2rem;
+    }
+
+    /* === MODAL STYLING === */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.7);
+      z-index: 1000;
+      overflow-y: auto;
+      backdrop-filter: blur(5px);
+    }
+
+    .modal-content {
+      background-color: var(--card-bg);
+      margin: 50px auto;
+      padding: 30px;
+      width: 90%;
+      max-width: 800px;
+      border-radius: var(--card-border-radius);
+      position: relative;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+      animation: modalFadeIn 0.3s ease;
+    }
+
+    @keyframes modalFadeIn {
+      from { opacity: 0; transform: translateY(-50px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .close-modal {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      font-size: 1.8rem;
+      cursor: pointer;
+      color: var(--text-color);
+      transition: all 0.2s ease;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+    }
+
+    .close-modal:hover {
+      background-color: rgba(0,0,0,0.1);
+      transform: rotate(90deg);
+    }
+
+    .modal h2 {
+      color: var(--primary-color);
+      margin-bottom: 25px;
+      font-family: var(--heading-font);
+      font-weight: 700;
+      font-size: 1.8rem;
+      position: relative;
+      display: inline-block;
+    }
+
+    .modal h2::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      bottom: -10px;
+      width: 60px;
+      height: 3px;
+      background-color: var(--accent-color);
+      border-radius: 3px;
+    }
+
+    /* === LOADING AND NOTIFICATIONS === */
+    .loading {
+      text-align: center;
+      margin: 30px 0;
+      color: var(--secondary-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid rgba(0,0,0,0.1);
+      border-left-color: var(--accent-color);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .notification {
+      position: fixed;
+      bottom: 25px;
+      right: 25px;
+      padding: 16px 25px;
+      border-radius: var(--border-radius);
+      color: white;
+      z-index: 1001;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.3s, transform 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      font-weight: 500;
+    }
+
+    .notification.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .notification.success {
+      background-color: var(--success-color);
+    }
+
+    .notification.error {
+      background-color: var(--error-color);
+    }
+
+    .notification-icon {
+      font-size: 1.5rem;
+    }
+
+    .no-recipes {
+      text-align: center;
+      padding: 60px 30px;
+      background-color: var(--card-bg);
+      border-radius: var(--card-border-radius);
+      box-shadow: 0 6px 15px var(--shadow-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .no-recipes-icon {
+      font-size: 3rem;
+      color: var(--primary-color);
+      opacity: 0.6;
+    }
+
+    .no-recipes h3 {
+      font-family: var(--heading-font);
+      font-size: 1.5rem;
+      margin-bottom: 10px;
+      color: var(--primary-color);
+    }
+
+    .no-recipes p {
+      color: var(--secondary-color);
+      max-width: 400px;
+      margin: 0 auto 20px;
+    }
+
+    /* === RESPONSIVE DESIGN === */
+    @media (max-width: 768px) {
+      header {
+        flex-direction: column;
+        align-items: center;
+        padding: 15px 10px;
+        gap: 15px;
+      }
+      
+      .header-buttons {
+        width: 100%;
+        justify-content: center;
+      }
+      
+      .search-filter-section {
+        flex-direction: column;
+      }
+      
+      .modal-content {
+        width: 95%;
+        margin: 20px auto;
+        padding: 20px 15px;
+      }
+
+      .ingredient-row {
+        flex-direction: column;
+      }
+
+      .recipes-layout {
+        grid-template-columns: 1fr;
+        height: auto;
+      }
+
+      .recipes-sidebar {
+        height: 200px;
+        margin-bottom: 20px;
+      }
+
+      .recipe-content {
+        height: auto;
+        min-height: 400px;
+      }
+      
+      .url-form-container .form-group {
+        flex-direction: column;
+      }
+      
+      .compact-ingredients {
+        grid-template-columns: 1fr;
+      }
+      
+      .compact-meta {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+    }
+
+    /* === ICONS === */
+    .icon {
+      font-family: 'Material Symbols Rounded', sans-serif;
+      font-weight: normal;
+      font-style: normal;
+      line-height: 1;
+      letter-spacing: normal;
+      text-transform: none;
+      white-space: nowrap;
+      word-wrap: normal;
+      direction: ltr;
+      font-feature-settings: 'liga';
+      -webkit-font-smoothing: antialiased;
+    }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1 class="site-title">Sallys recept</h1>
+      <div class="header-buttons">
+        <button id="exportBtn" class="header-btn">
+          <span class="icon">download</span> Exportera
+        </button>
+        <button id="importBtn" class="header-btn">
+          <span class="icon">upload</span> Importera
+        </button>
+        <input type="file" id="fileInput" accept=".json">
+        <button class="theme-toggle header-btn">
+          <span class="icon">dark_mode</span> Byt till mörkt läge
+        </button>
+      </div>
+    </header>
+
+    <div class="tabs-container">
+      <div class="tab-buttons">
+        <button class="tab-btn active" data-tab="urlTab">
+          <span class="icon">link</span> Lägg till från URL
+        </button>
+        <button class="tab-btn" data-tab="manualTab">
+          <span class="icon">edit_note</span> Lägg till manuellt
+        </button>
+        <button class="tab-btn" data-tab="allRecipesTab">
+          <span class="icon">menu_book</span> Alla recept
+        </button>
+      </div>
+
+      <div class="tab-content active" id="urlTab">
+        <div class="url-form-container">
+          <h2>Bara Receptet</h2>
+          <p>Klistra in en receptlänk och vi extraherar bara receptet utan reklam, livsberättelser eller annat onödigt.</p>
+          
+          <form id="urlRecipeForm">
+            <div class="form-group">
+              <input type="text" id="recipeUrl" placeholder="Klistra in en recept-URL här..." required>
+              <button type="submit">
+                <span class="icon">search</span> Hämta recept
+              </button>
+            </div>
+          </form>
+          
+          <div id="loadingIndicator" class="loading" style="display: none;">
+            <div class="loading-spinner"></div>
+            <span>Hämtar recept...</span>
+          </div>              
+        </div>
+      </div>
+
+      <div class="tab-content" id="manualTab">
+        <form id="manualRecipeForm">
+          <div class="form-group">
+            <label for="recipeTitle">Receptets namn</label>
+            <input type="text" id="recipeTitle" placeholder="Ange receptets namn..." required>
+          </div>
+
+          <div class="form-group">
+            <label for="recipeCookTime">Tillagningstid</label>
+            <input type="text" id="recipeCookTime" placeholder="t.ex. 30 minuter" required>
+          </div>
+
+          <div class="form-group">
+            <label for="recipeImage">Bild-URL (valfritt)</label>
+            <input type="text" id="recipeImage" placeholder="Ange URL till en bild...">
+          </div>
+
+          <div class="form-group">
+            <label for="recipeTags">Taggar (kommaseparerade)</label>
+            <input type="text" id="recipeTags" placeholder="t.ex. middag, italienskt, pasta">
+          </div>
+
+          <div class="form-group">
+            <label>Ingredienser</label>
+            <div id="ingredientsList">
+              <div class="ingredient-row">
+                <input type="text" class="ingredient-input" placeholder="Ange en ingrediens..." required>
+                <button type="button" class="delete-btn ingredient-delete-btn">
+                  <span class="icon">close</span>
+                </button>
+              </div>
+            </div>
+            <button type="button" class="add-more-btn" id="addIngredientBtn">
+              <span class="icon">add</span> Lägg till ingrediens
+            </button>
+          </div>
+
+          <div class="form-group">
+            <label>Instruktioner</label>
+            <div id="instructionsList">
+              <div class="ingredient-row">
+                <input type="text" class="instruction-input" placeholder="Ange ett steg..." required>
+                <button type="button" class="delete-btn instruction-delete-btn">
+                  <span class="icon">close</span>
+                </button>
+              </div>
+            </div>
+            <button type="button" class="add-more-btn" id="addInstructionBtn">
+              <span class="icon">add</span> Lägg till steg
+            </button>
+          </div>
+
+          <div class="form-group">
+            <label for="recipeSource">Källa URL (valfritt)</label>
+            <input type="text" id="recipeSource" placeholder="Ange källans URL...">
+          </div>
+
+          <button type="submit">
+            <span class="icon">restaurant_menu</span> Lägg till recept
+          </button>
+        </form>
+      </div>
+
+      <div class="tab-content" id="allRecipesTab">
+        <div class="search-filter-section">
+          <div class="search-bar">
+            <span class="search-icon icon">search</span>
+            <input type="text" id="searchInput" placeholder="Sök recept...">
+          </div>
+        </div>
+
+        <div class="recipes-layout">
+          <div class="recipes-sidebar">
+            <ul class="recipes-list" id="recipesList">
+              <!-- Recipe list items will be generated here -->
+            </ul>
+          </div>
+          <div class="recipe-content" id="recipeContent">
+            <div class="no-recipe-selected">
+              <span class="no-recipe-icon icon">menu_book</span>
+              <p>Välj ett recept från listan</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="editModal">
+    <div class="modal-content">
+      <span class="close-modal close-edit-modal icon">close</span>
+      <h2>Redigera recept</h2>
+      <form id="editRecipeForm">
+        <input type="hidden" id="editRecipeIndex">
+        <div class="form-group">
+          <label for="editRecipeTitle">Receptets namn</label>
+          <input type="text" id="editRecipeTitle" required>
+        </div>
+
+        <div class="form-group">
+          <label for="editRecipeCookTime">Tillagningstid</label>
+          <input type="text" id="editRecipeCookTime" required>
+        </div>
+
+        <div class="form-group">
+          <label for="editRecipeImage">Bild-URL (valfritt)</label>
+          <input type="text" id="editRecipeImage">
+        </div>
+
+        <div class="form-group">
+          <label for="editRecipeTags">Taggar (kommaseparerade)</label>
+          <input type="text" id="editRecipeTags">
+        </div>
+
+        <div class="form-group">
+          <label>Ingredienser</label>
+          <div id="editIngredientsList">
+            <!-- Ingredients will be generated here -->
+          </div>
+          <button type="button" class="add-more-btn" id="editAddIngredientBtn">
+            <span class="icon">add</span> Lägg till ingrediens
+          </button>
+        </div>
+
+        <div class="form-group">
+          <label>Instruktioner</label>
+          <div id="editInstructionsList">
+            <!-- Instructions will be generated here -->
+          </div>
+          <button type="button" class="add-more-btn" id="editAddInstructionBtn">
+            <span class="icon">add</span> Lägg till steg
+          </button>
+        </div>
+
+        <div class="form-group">
+          <label for="editRecipeSource">Källa URL (valfritt)</label>
+          <input type="text" id="editRecipeSource">
+        </div>
+
+        <button type="submit">
+          <span class="icon">save</span> Uppdatera recept
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div class="notification" id="notification"></div>
+
+  <script>
+    // Default starter recipes
+    const defaultRecipes = [
+      {
+        title: "Vildsvinsgryta med lingon",
+        cookTime: "2 timmar",
+        imageUrl: "/api/placeholder/400/300",
+        tags: ["viltkött", "gryta", "middag"],
+        ingredients: [
+          "700 g vildsvinskött",
+          "2 msk smör",
+          "1 gul lök",
+          "2 vitlöksklyftor",
+          "2 morötter",
+          "100 g svamp",
+          "2 dl rött vin",
+          "5 dl viltfond",
+          "2 kvistar timjan",
+          "2 lagerblad",
+          "1 dl grädde",
+          "Salt och peppar",
+          "2 msk lingonsylt"
+        ],
+        instructions: [
+          "Skär vildsvinsköttet i jämna bitar, ca 3x3 cm. Salta och peppra.",
+          "Bryn köttet i smör i en gryta eller tjockbottnad kastrull. Lyft upp och lägg åt sidan.",
+          "Finhacka lök och vitlök. Skala och tärna morötterna. Rensa och skiva svampen.",
+          "Fräs lök, vitlök, morötter och svamp i samma gryta.",
+          "Lägg tillbaka köttet och häll i rödvin och viltfond.",
+          "Tillsätt timjan och lagerblad. Låt sjuda under lock i ca 1,5 timme eller tills köttet är mört.",
+          "Tillsätt grädden och låt sjuda ytterligare 10 minuter. Smaka av med salt och peppar.",
+          "Servera med lingonsylt, potatismos eller kokt potatis."
+        ],
+        sourceUrl: "https://www.exempel.se/vildsvinsgryta"
+      },
+      {
+        title: "Örtbakad regnbågsforell med kantareller",
+        cookTime: "45 minuter",
+        imageUrl: "/api/placeholder/400/300",
+        tags: ["fisk", "svamp", "middag"],
+        ingredients: [
+          "1 hel regnbågsforell (ca 1 kg)",
+          "1 citron",
+          "1 knippe dill",
+          "1 knippe persilja",
+          "2 vitlöksklyftor",
+          "3 msk olivolja",
+          "Salt och peppar",
+          "200 g kantareller",
+          "1 schalottenlök",
+          "2 msk smör",
+          "1 dl grädde"
+        ],
+        instructions: [
+          "Sätt ugnen på 200°C.",
+          "Rensa fisken om den inte är rensad. Skölj den och torka av den med hushållspapper.",
+          "Skiva citronen. Hacka hälften av örterna och pressa vitlöksklyftorna.",
+          "Gnid in fisken med olivolja, salt, peppar, citronjuice, vitlök och de hackade örterna.",
+          "Fyll fiskens buk med citronskivor och resten av örterna.",
+          "Lägg fisken i en ugnsfast form och tillaga i mitten av ugnen i ca 25-30 minuter.",
+          "Under tiden, rensa och torka av svampen. Finhacka schalottenlöken.",
+          "Fräs löken i smör i en stekpanna. Tillsätt svampen och stek tills vätskan avdunstat.",
+          "Häll i grädden och låt sjuda i några minuter. Smaka av med salt och peppar.",
+          "Servera fisken med kantarellsåsen och kokt potatis eller pressad potatis."
+        ],
+        sourceUrl: "https://www.exempel.se/ortbakad-forell"
+      },
+      {
+        title: "Skogssvampspaj med timjan",
+        cookTime: "1 timme 15 minuter",
+        imageUrl: "/api/placeholder/400/300",
+        tags: ["vegetariskt", "svamp", "paj"],
+        ingredients: [
+          "3 dl vetemjöl",
+          "125 g smör",
+          "2 msk kallt vatten",
+          "1 nypa salt",
+          "500 g blandsvamp (kantareller, karljohan, trattkantareller)",
+          "1 gul lök",
+          "2 vitlöksklyftor",
+          "2 msk smör",
+          "2 msk färsk timjan (eller 2 tsk torkad)",
+          "3 ägg",
+          "2 dl grädde",
+          "1 dl mjölk",
+          "150 g riven ost",
+          "Salt och svartpeppar"
+        ],
+        instructions: [
+          "Börja med pajdegen: Blanda mjöl och salt i en bunke. Tillsätt smöret i små bitar och arbeta snabbt ihop till en grynig massa.",
+          "Tillsätt vattnet och arbeta ihop till en smidig deg. Tryck ut i en pajform (ca 24 cm diameter) och ställ kallt i 30 minuter.",
+          "Sätt ugnen på 200°C och förgrädda pajskalet i ca 10 minuter.",
+          "Rensa och skär svampen i mindre bitar. Finhacka lök och vitlök.",
+          "Fräs löken i smör tills den är mjuk. Tillsätt svampen och fräs tills vätskan dunstat bort. Tillsätt timjan, salt och peppar.",
+          "Vispa ihop ägg, grädde och mjölk. Blanda i hälften av osten.",
+          "Fördela svampblandningen i pajskalet, häll över äggstanningen och strö över resten av osten.",
+          "Sänk ugnstemperaturen till 175°C och grädda pajen i ca 30-35 minuter tills den fått fin färg och stanningen stelnat.",
+          "Låt pajen vila ca 10 minuter innan servering. Servera med en grönsallad."
+        ],
+        sourceUrl: "https://www.exempel.se/skogssvampspaj"
+      }
+    ];
+
+    // Storage utility to handle localStorage security issues
+    const storage = {
+      // In-memory backup storage when localStorage is not available
+      memoryStorage: {
+        recipes: null,
+        theme: null
+      },
+
+      // Check if localStorage is available
+      isAvailable: function() {
+        try {
+          const testKey = '__test_key__';
+          localStorage.setItem(testKey, testKey);
+          localStorage.removeItem(testKey);
+          return true;
+        } catch (e) {
+          console.log('localStorage not available, using in-memory storage instead.');
+          return false;
+        }
+      },
+
+      // Get item from storage (localStorage or memory fallback)
+      getItem: function(key) {
+        try {
+          if (this.isAvailable()) {
+            return localStorage.getItem(key);
+          }
+          return this.memoryStorage[key];
+        } catch (e) {
+          console.log(`Error getting ${key} from storage:`, e);
+          return this.memoryStorage[key];
+        }
+      },
+
+      // Set item in storage (localStorage or memory fallback)
+      setItem: function(key, value) {
+        try {
+          // Always update memory storage
+          this.memoryStorage[key] = value;
+          
+          // Try to update localStorage if available
+          if (this.isAvailable()) {
+            localStorage.setItem(key, value);
+          }
+        } catch (e) {
+          console.log(`Error setting ${key} in storage:`, e);
+        }
+      }
+    };
+
+    // DOM Elements
+    const urlRecipeForm = document.getElementById('urlRecipeForm');
+    const manualRecipeForm = document.getElementById('manualRecipeForm');
+    const recipeUrlInput = document.getElementById('recipeUrl');
+    const exportBtn = document.getElementById('exportBtn');
+    const importBtn = document.getElementById('importBtn');
+    const fileInput = document.getElementById('fileInput');
+    const themeToggle = document.querySelector('.theme-toggle');
+    const editModal = document.getElementById('editModal');
+    const closeEditModal = document.querySelector('.close-edit-modal');
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    const searchInput = document.getElementById('searchInput');
+    const notification = document.getElementById('notification');
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+    const recipesList = document.getElementById('recipesList');
+    const recipeContent = document.getElementById('recipeContent');
+
+    // Initialize recipes from storage or use defaults
+    let storedRecipes = storage.getItem('recipes');
+    let recipes = storedRecipes ? JSON.parse(storedRecipes) : defaultRecipes;
+    let activeRecipeIndex = -1;
+
+    // Initialize theme
+    const currentTheme = storage.getItem('theme');
+    if (currentTheme === 'dark') {
+      document.body.classList.add('dark-theme');
+      themeToggle.innerHTML = '<span class="icon">light_mode</span> Byt till ljust läge';
+    }
+
+    // Show notification
+    function showNotification(message, type) {
+      const notification = document.getElementById('notification');
+      const icon = type === 'success' ? 'check_circle' : 'error';
+      notification.innerHTML = `<span class="notification-icon icon">${icon}</span>${message}`;
+      notification.className = `notification ${type}`;
+      notification.classList.add('show');
+      
+      setTimeout(() => {
+        notification.classList.remove('show');
+      }, 3000);
+    }
+
+    // Tab switching
+    tabButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        // Remove active class from all tabs
+        tabButtons.forEach(btn => btn.classList.remove('active'));
+        tabContents.forEach(content => content.classList.remove('active'));
+        
+        // Add active class to clicked tab
+        button.classList.add('active');
+        document.getElementById(button.dataset.tab).classList.add('active');
+        
+        // If switching to all recipes tab, update the recipes list
+        if (button.dataset.tab === 'allRecipesTab') {
+          generateRecipesList();
+        }
+      });
+    });
+
+    // Add ingredient/instruction fields
+    function createInputRow(container, inputClass, deleteClass) {
+      const row = document.createElement('div');
+      row.className = 'ingredient-row';
+      
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = inputClass;
+      input.placeholder = inputClass === 'ingredient-input' ? 'Ange en ingrediens...' : 'Ange ett steg...';
+      input.required = true;
+      
+      const deleteBtn = document.createElement('button');
+      deleteBtn.type = 'button';
+      deleteBtn.className = `delete-btn ${deleteClass}`;
+      deleteBtn.innerHTML = '<span class="icon">close</span>';
+      deleteBtn.addEventListener('click', function() {
+        row.remove();
+      });
+      
+      row.appendChild(input);
+      row.appendChild(deleteBtn);
+      container.appendChild(row);
+      
+      return row;
+    }
+
+    document.getElementById('addIngredientBtn').addEventListener('click', () => {
+      createInputRow(document.getElementById('ingredientsList'), 'ingredient-input', 'ingredient-delete-btn');
+    });
+
+    document.getElementById('addInstructionBtn').addEventListener('click', () => {
+      createInputRow(document.getElementById('instructionsList'), 'instruction-input', 'instruction-delete-btn');
+    });
+
+    document.getElementById('editAddIngredientBtn').addEventListener('click', () => {
+      createInputRow(document.getElementById('editIngredientsList'), 'ingredient-input', 'ingredient-delete-btn');
+    });
+
+    document.getElementById('editAddInstructionBtn').addEventListener('click', () => {
+      createInputRow(document.getElementById('editInstructionsList'), 'instruction-input', 'instruction-delete-btn');
+    });
+
+    // Initial delete buttons setup
+    document.addEventListener('click', function(e) {
+      if (e.target.closest('.ingredient-delete-btn')) {
+        const row = e.target.closest('.ingredient-row');
+        const container = row.parentElement;
+        if (container.children.length > 1) {
+          row.remove();
+        }
+      }
+      
+      if (e.target.closest('.instruction-delete-btn')) {
+        const row = e.target.closest('.ingredient-row');
+        const container = row.parentElement;
+        if (container.children.length > 1) {
+          row.remove();
+        }
+      }
+    });
+
+    // Generate recipes list for the sidebar
+    function generateRecipesList() {
+      recipesList.innerHTML = '';
+      
+      if (recipes.length === 0) {
+        recipesList.innerHTML = '<li class="recipe-list-item">Inga recept hittades</li>';
+        return;
+      }
+      
+      // Filter recipes if search term exists
+      const searchTerm = searchInput.value.toLowerCase();
+      const filteredRecipes = searchTerm ? 
+        recipes.filter(recipe => 
+          recipe.title.toLowerCase().includes(searchTerm) || 
+          recipe.ingredients.some(ing => ing.toLowerCase().includes(searchTerm)) ||
+          (recipe.tags && recipe.tags.some(tag => tag.toLowerCase().includes(searchTerm)))
+        ) : recipes;
+      
+      // Generate list items
+      filteredRecipes.forEach((recipe, index) => {
+        const listItem = document.createElement('li');
+        listItem.className = 'recipe-list-item';
+        if (index === activeRecipeIndex) {
+          listItem.classList.add('active');
+        }
+        
+        listItem.innerHTML = `
+          <span class="recipe-number">${index + 1}</span>
+          <span class="recipe-list-text">${recipe.title}</span>
+        `;
+        
+        listItem.addEventListener('click', () => {
+          // Update active recipe
+          activeRecipeIndex = index;
+          
+          // Update active class
+          document.querySelectorAll('.recipe-list-item').forEach(item => {
+            item.classList.remove('active');
+          });
+          listItem.classList.add('active');
+          
+          // Display recipe content
+          displayCompactRecipe(index);
+        });
+        
+        recipesList.appendChild(listItem);
+      });
+      
+      // If we have recipes but none are active, activate the first one
+      if (filteredRecipes.length > 0 && activeRecipeIndex === -1) {
+        activeRecipeIndex = 0;
+        document.querySelector('.recipe-list-item').classList.add('active');
+        displayCompactRecipe(0);
+      }
+    }
+
+    // Display compact recipe in the main content area
+    function displayCompactRecipe(index) {
+      const recipe = recipes[index];
+      
+      // Create tags HTML
+      const tagsHtml = recipe.tags && recipe.tags.length ? 
+        `<div class="recipe-tags">
+          ${recipe.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+        </div>` : '';
+      
+      recipeContent.innerHTML = `
+        <div class="compact-recipe">
+          <h2>${recipe.title}</h2>
+          
+          <div class="compact-meta">
+            <div class="meta-item">
+              <span class="meta-icon icon">schedule</span>
+              <span>${recipe.cookTime}</span>
+            </div>
+            
+            <div class="compact-actions">
+              <button class="edit-btn" data-index="${index}">
+                <span class="icon">edit</span> Redigera
+              </button>
+              <button class="delete-btn" data-index="${index}">
+                <span class="icon">delete</span> Ta bort
+              </button>
+            </div>
+          </div>
+          
+          ${tagsHtml}
+          
+          <div class="compact-section">
+            <h3><span class="section-icon icon">inventory_2</span> Ingredienser</h3>
+            <ul class="compact-ingredients">
+              ${recipe.ingredients.map(ing => `<li>${ing}</li>`).join('')}
+            </ul>
+          </div>
+          
+          <div class="compact-section">
+            <h3><span class="section-icon icon">cooking</span> Instruktioner</h3>
+            <ol class="compact-instructions">
+              ${recipe.instructions.map(step => `<li>${step}</li>`).join('')}
+            </ol>
+          </div>
+          
+          ${recipe.sourceUrl ? `
+          <div class="compact-source">
+            <p>Källa: <a href="${recipe.sourceUrl}" target="_blank">${recipe.sourceUrl}</a></p>
+          </div>
+          ` : ''}
+        </div>
+      `;
+      
+      // Add event listeners for edit and delete buttons
+      recipeContent.querySelector('.edit-btn').addEventListener('click', () => {
+        editRecipe(index);
+      });
+      
+      recipeContent.querySelector('.delete-btn').addEventListener('click', () => {
+        if (confirm('Är du säker på att du vill ta bort det här receptet?')) {
+          recipes.splice(index, 1);
+          storage.setItem('recipes', JSON.stringify(recipes));
+          
+          // Reset active index if we deleted the active recipe
+          if (activeRecipeIndex === index) {
+            activeRecipeIndex = recipes.length > 0 ? 0 : -1;
+          } else if (activeRecipeIndex > index) {
+            // Adjust index if we deleted a recipe before the active one
+            activeRecipeIndex--;
+          }
+          
+          generateRecipesList();
+          showNotification('Receptet har tagits bort', 'success');
+        }
+      });
+    }
+
+    // Edit recipe
+    function editRecipe(index) {
+      const recipe = recipes[index];
+      
+      // Fill the edit form
+      document.getElementById('editRecipeIndex').value = index;
+      document.getElementById('editRecipeTitle').value = recipe.title;
+      document.getElementById('editRecipeCookTime').value = recipe.cookTime;
+      document.getElementById('editRecipeImage').value = recipe.imageUrl || '';
+      document.getElementById('editRecipeTags').value = recipe.tags ? recipe.tags.join(', ') : '';
+      document.getElementById('editRecipeSource').value = recipe.sourceUrl || '';
+      
+      // Fill ingredients
+      const editIngredientsList = document.getElementById('editIngredientsList');
+      editIngredientsList.innerHTML = '';
+      recipe.ingredients.forEach(ingredient => {
+        const row = createInputRow(editIngredientsList, 'ingredient-input', 'ingredient-delete-btn');
+        row.querySelector('input').value = ingredient;
+      });
+      
+      // Fill instructions
+      const editInstructionsList = document.getElementById('editInstructionsList');
+      editInstructionsList.innerHTML = '';
+      recipe.instructions.forEach(instruction => {
+        const row = createInputRow(editInstructionsList, 'instruction-input', 'instruction-delete-btn');
+        row.querySelector('input').value = instruction;
+      });
+      
+      editModal.style.display = 'block';
+    }
+
+    // Close edit modal
+    closeEditModal.addEventListener('click', () => {
+      editModal.style.display = 'none';
+    });
+
+    // Close modal when clicking outside
+    window.addEventListener('click', (e) => {
+      if (e.target === editModal) {
+        editModal.style.display = 'none';
+      }
+    });
+
+    // Toggle theme
+    themeToggle.addEventListener('click', () => {
+      document.body.classList.toggle('dark-theme');
+      const isDark = document.body.classList.contains('dark-theme');
+      storage.setItem('theme', isDark ? 'dark' : 'light');
+      themeToggle.innerHTML = isDark ? 
+        '<span class="icon">light_mode</span> Byt till ljust läge' : 
+        '<span class="icon">dark_mode</span> Byt till mörkt läge';
+    });
+
+    // Extract recipe data from URL
+    async function extractRecipeFromIcaSe(url) {
+      // This is a mock implementation - normally we would use server-side scraping
+      // Let's simulate different recipes based on the URL
+      
+      if (url.includes('ica.se/recept/')) {
+        // If it's an ICA recipe, create different recipes based on URL patterns
+        const urlLower = url.toLowerCase();
+        
+        if (urlLower.includes('paj') || urlLower.includes('ost-och-skink')) {
+          return {
+            title: "Skogsinspirerad ost- och skinkpaj",
+            cookTime: "40 minuter",
+            tags: ["middag", "paj", "ost", "skog"],
+            ingredients: [
+              "3 dl vetemjöl",
+              "125 g smör",
+              "2 msk kallt vatten",
+              "1 krm salt",
+              "150 g skinka",
+              "2 dl riven ost",
+              "3 ägg",
+              "2 dl mjölk",
+              "1 dl grädde",
+              "1 msk hackad färsk timjan",
+              "1 krm svartpeppar",
+              "1 krm muskot"
+            ],
+            instructions: [
+              "Sätt ugnen på 200°C.",
+              "Blanda mjöl och salt i en bunke. Tillsätt smöret skuret i små bitar och nyp ihop till en grynig massa.",
+              "Tillsätt vattnet och arbeta snabbt ihop till en deg.",
+              "Tryck ut degen i en pajform, ca 24 cm i diameter. Låt vila i kylen ca 30 minuter.",
+              "Förgrädda pajskalet i ca 10 minuter.",
+              "Tärna skinkan och fördela i pajskalet tillsammans med osten.",
+              "Vispa ihop ägg, mjölk, grädde, timjan, salt, peppar och muskot. Häll blandningen över skinkan och osten.",
+              "Grädda i nedre delen av ugnen i ca 25-30 minuter eller tills fyllningen stelnat och fått fin färg."
+            ],
+            sourceUrl: url
+          };
+        } else if (urlLower.includes('kottbull') || urlLower.includes('köttbull')) {
+          return {
+            title: "Vildskogens köttbullar",
+            cookTime: "30 minuter",
+            tags: ["middag", "svenskt", "husmanskost", "kött"],
+            ingredients: [
+              "500 g viltkött (älg eller vildsvin)",
+              "1 ägg",
+              "1 dl ströbröd",
+              "2 dl mjölk",
+              "1 gul lök",
+              "1 msk enbär, krossade",
+              "1 msk färsk timjan, hackad",
+              "1 tsk salt",
+              "1 krm svartpeppar",
+              "2 msk smör till stekning",
+              "2 msk lingonsylt"
+            ],
+            instructions: [
+              "Skala och hacka löken fint. Fräs den mjuk i lite smör utan att den tar färg.",
+              "Blanda ströbröd och mjölk i en bunke. Låt svälla i 10 minuter.",
+              "Tillsätt färs, ägg, lök, krossade enbär, timjan, salt och peppar. Blanda till en jämn smet.",
+              "Forma smeten till små bullar.",
+              "Stek köttbullarna i smör i en stekpanna, ca 5-8 minuter.",
+              "Servera med potatismos, rårörda lingon och pressgurka."
+            ],
+            sourceUrl: url
+          };
+        } else if (urlLower.includes('kladdkaka')) {
+          return {
+            title: "Mörk skogskladdkaka med björnbär",
+            cookTime: "25 minuter",
+            tags: ["dessert", "choklad", "bakning", "bär"],
+            ingredients: [
+              "100 g smör",
+              "2.5 dl strösocker",
+              "2 ägg",
+              "1.5 dl vetemjöl",
+              "4 msk kakao",
+              "1 tsk vaniljsocker",
+              "1 nypa salt",
+              "100 g mörk choklad, hackad",
+              "1 dl färska björnbär"
+            ],
+            instructions: [
+              "Sätt ugnen på 175°C.",
+              "Smält smöret i en kastrull. Tillsätt den hackade mörka chokladen och rör tills den smält.",
+              "Blanda alla torra ingredienser i en bunke.",
+              "Häll i det smälta smöret med choklad och tillsätt äggen. Rör till en jämn smet.",
+              "Rör försiktigt ner hälften av björnbären i smeten.",
+              "Häll smeten i en smord och bröad form, ca 24 cm i diameter.",
+              "Strö över resten av björnbären.",
+              "Grädda i mitten av ugnen i ca 15-18 minuter.",
+              "Låt svalna och servera med vispad grädde och mer färska bär."
+            ],
+            sourceUrl: url
+          };
+        } else {
+          return {
+            title: "Örtkryddad laxfilé med skogssvamp",
+            cookTime: "25 minuter",
+            tags: ["fisk", "svamp", "middag"],
+            ingredients: [
+              "600 g laxfilé",
+              "1 tsk salt",
+              "1 krm peppar",
+              "1 msk olivolja",
+              "1 knippe dill, hackad",
+              "1 msk färsk timjan",
+              "200 g skogssvamp (kantareller, karljohan eller annan svamp)",
+              "1 schalottenlök, finhackad",
+              "2 msk smör",
+              "2 dl crème fraiche",
+              "1 msk pressad citron"
+            ],
+            instructions: [
+              "Sätt ugnen på 175°C.",
+              "Lägg laxen i en ugnsfast form. Salta, peppra och ringla över olja.",
+              "Strö över den hackade dillen och timjan.",
+              "Tillaga i ugnen ca 15-20 minuter.",
+              "Under tiden, rensa och skär svampen i mindre bitar om de är stora.",
+              "Fräs schalottenlöken i smör i en panna tills den mjuknat.",
+              "Tillsätt svampen och stek på medelhög värme tills vätskan avdunstat.",
+              "Rör ner crème fraiche och citronsaft. Låt sjuda i några minuter.",
+              "Smaka av svampsåsen med salt och peppar.",
+              "Servera laxen med svampsåsen och kokt potatis eller pressad potatis."
+            ],
+            sourceUrl: url
+          };
+        }
+      } else if (url.includes('koket.se')) {
+        return {
+          title: "Örtkryddad viltköttsgryta",
+          cookTime: "2 timmar",
+          tags: ["vilt", "gryta", "middag", "långkok"],
+          ingredients: [
+            "800 g viltkött (älg, hjort eller ren)",
+            "2 msk smör",
+            "1 gul lök, grovhackad",
+            "2 vitlöksklyftor, hackade",
+            "2 morötter, skurna i bitar",
+            "1 palsternacka, skuren i bitar",
+            "200 g svamp (helst skogssvamp)",
+            "3 dl vildfond eller köttbuljong",
+            "2 dl rött vin",
+            "2 lagerblad",
+            "3 enbär, krossade",
+            "1 kvist rosmarin",
+            "2 kvistar timjan",
+            "2 msk lingonsylt",
+            "1 dl grädde",
+            "Salt och svartpeppar"
+          ],
+          instructions: [
+            "Skär köttet i jämna bitar, ca 3x3 cm. Torka av det med hushållspapper.",
+            "Bryn köttet i omgångar i smör i en gryta tills det fått fin färg. Krydda med salt och peppar.",
+            "Lägg köttet åt sidan och fräs löken, vitlöken, morötter och palsternacka i samma gryta.",
+            "Tillsätt svampen och fräs ytterligare någon minut.",
+            "Lägg tillbaka köttet och häll på vin och fond/buljong.",
+            "Tillsätt lagerblad, krossade enbär, rosmarin och timjan.",
+            "Låt grytan sjuda under lock i ca 1,5-2 timmar eller tills köttet är mört.",
+            "Tillsätt lingonsylt och grädde. Låt sjuda ytterligare 10 minuter utan lock.",
+            "Smaka av med salt och peppar.",
+            "Servera med potatismos eller kokt potatis och rårörda lingon."
+          ],
+          sourceUrl: url
+        };
+      } else if (url.includes('arla.se')) {
+        return {
+          title: "Skogsbärspannkakor med vaniljgrädde",
+          cookTime: "30 minuter",
+          tags: ["dessert", "pannkakor", "bär"],
+          ingredients: [
+            "3 dl vetemjöl",
+            "1 krm salt",
+            "6 dl mjölk",
+            "3 ägg",
+            "50 g smält smör + extra till stekning",
+            "300 g skogsbär (blåbär, lingon, björnbär eller hallon)",
+            "2 dl vispgrädde",
+            "1 tsk vaniljsocker",
+            "2 msk florsocker",
+            "1 msk färsk mynta, hackad"
+          ],
+          instructions: [
+            "Blanda mjöl och salt i en bunke. Vispa i hälften av mjölken till en jämn smet.",
+            "Tillsätt resten av mjölken, äggen och det smälta smöret. Låt smeten vila i 10 minuter.",
+            "Värm en stekpanna och tillsätt en klick smör.",
+            "Häll i ca 1 dl smet och vinkla pannan så smeten rinner ut över hela bottnen.",
+            "Stek pannkakan ca 1 minut, vänd och stek ca 30 sekunder till.",
+            "Fortsätt med resten av smeten.",
+            "Vispa grädden tillsammans med vaniljsockret till mjuka toppar.",
+            "Servera pannkakorna med skogsbär, vaniljgrädde, florsocker och myntablad."
+          ],
+          sourceUrl: url
+        };
+      } else {
+        // Generic extraction for other sites
+        return {
+          title: "Svamprisotto med skogens smaker",
+          cookTime: "40 minuter",
+          tags: ["vegetariskt", "svamp", "risotto", "middag"],
+          ingredients: [
+            "300 g blandad svamp (karljohan, kantarell, champinjon)",
+            "1 gul lök, finhackad",
+            "2 vitlöksklyftor, finhackade",
+            "3 dl risottoris (carnaroli eller arborio)",
+            "1 dl torrt vitt vin",
+            "8-9 dl varm svampbuljong eller grönsaksbuljong",
+            "50 g smör",
+            "1 dl riven parmesan",
+            "2 msk färsk timjan, hackad",
+            "1 msk färsk persilja, hackad",
+            "Salt och svartpeppar",
+            "Lite citronsaft"
+          ],
+          instructions: [
+            "Rensa och skär svampen i mindre bitar.",
+            "Hetta upp 2 msk smör i en tjockbottnad kastrull och fräs hälften av svampen på hög värme tills den fått färg. Lägg åt sidan.",
+            "I samma kastrull, fräs lök och vitlök tills de mjuknat utan att få färg.",
+            "Tillsätt riset och fräs i 1-2 minuter tills det blir glansigt.",
+            "Häll i vinet och låt det koka in i riset.",
+            "Tillsätt buljongen lite i taget, rör om regelbundet och låt vätskan absorberas innan du tillsätter mer.",
+            "När riset är nästan färdigt (efter ca 18-20 minuter), tillsätt resten av svampen, utom den du sparat som garnering.",
+            "Ta kastrullen från värmen, rör ner resten av smöret, parmesan, timjan och persilja.",
+            "Smaka av med salt, peppar och en skvätt citronsaft.",
+            "Servera omedelbart, toppad med den stekta svampen och extra parmesan."
+          ],
+          sourceUrl: url
+        };
+      }
+    }
+
+    // Submit URL recipe form
+    urlRecipeForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const url = recipeUrlInput.value.trim();
+      
+      if (!url) {
+        showNotification('Vänligen ange en giltig URL', 'error');
+        return;
+      }
+      
+      try {
+        loadingIndicator.style.display = 'block';
+        
+        // Simulate extraction process
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        // Parse the URL
+        let fullUrl;
+        try {
+          fullUrl = new URL(url.startsWith('http') ? url : 'https://' + url);
+        } catch {
+          throw new Error('Ogiltig URL-format');
+        }
+        
+        // Extract recipe data
+        const extractedRecipe = await extractRecipeFromIcaSe(fullUrl.href);
+        
+        // Add image URL
+        extractedRecipe.imageUrl = '/api/placeholder/400/300';
+        
+        // Add to recipes array
+        recipes.push(extractedRecipe);
+        storage.setItem('recipes', JSON.stringify(recipes));
+        
+        // Reset form
+        recipeUrlInput.value = '';
+        
+        // Switch to all recipes tab and select the new recipe
+        tabButtons.forEach(btn => btn.classList.remove('active'));
+        tabContents.forEach(content => content.classList.remove('active'));
+        document.querySelector('[data-tab="allRecipesTab"]').classList.add('active');
+        document.getElementById('allRecipesTab').classList.add('active');
+        
+        activeRecipeIndex = recipes.length - 1;
+        generateRecipesList();
+        
+        showNotification('Receptet har hämtats!', 'success');
+      } catch (error) {
+        showNotification(`Fel: ${error.message}`, 'error');
+      } finally {
+        loadingIndicator.style.display = 'none';
+      }
+    });
+
+    // Submit manual recipe form
+    manualRecipeForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      
+      // Collect ingredients
+      const ingredientInputs = document.querySelectorAll('#ingredientsList .ingredient-input');
+      const ingredients = [];
+      ingredientInputs.forEach(input => {
+        if (input.value.trim()) {
+          ingredients.push(input.value.trim());
+        }
+      });
+      
+      // Collect instructions
+      const instructionInputs = document.querySelectorAll('#instructionsList .instruction-input');
+      const instructions = [];
+      instructionInputs.forEach(input => {
+        if (input.value.trim()) {
+          instructions.push(input.value.trim());
+        }
+      });
+      
+      // Process tags
+      const tagsInput = document.getElementById('recipeTags').value;
+      const tags = tagsInput ? tagsInput.split(',').map(tag => tag.trim()) : [];
+      
+      // Create recipe object
+      const newRecipe = {
+        title: document.getElementById('recipeTitle').value.trim(),
+        cookTime: document.getElementById('recipeCookTime').value.trim(),
+        imageUrl: document.getElementById('recipeImage').value.trim() || '/api/placeholder/400/300',
+        tags: tags,
+        ingredients: ingredients,
+        instructions: instructions,
+        sourceUrl: document.getElementById('recipeSource').value.trim() || ''
+      };
+      
+      // Add to recipes array
+      recipes.push(newRecipe);
+      storage.setItem('recipes', JSON.stringify(recipes));
+      
+      // Reset form
+      manualRecipeForm.reset();
+      document.getElementById('ingredientsList').innerHTML = '';
+      createInputRow(document.getElementById('ingredientsList'), 'ingredient-input', 'ingredient-delete-btn');
+      document.getElementById('instructionsList').innerHTML = '';
+      createInputRow(document.getElementById('instructionsList'), 'instruction-input', 'instruction-delete-btn');
+      
+      // Switch to all recipes tab and select the new recipe
+      tabButtons.forEach(btn => btn.classList.remove('active'));
+      tabContents.forEach(content => content.classList.remove('active'));
+      document.querySelector('[data-tab="allRecipesTab"]').classList.add('active');
+      document.getElementById('allRecipesTab').classList.add('active');
+      
+      activeRecipeIndex = recipes.length - 1;
+      generateRecipesList();
+      
+      showNotification('Receptet har lagts till', 'success');
+    });
+
+    // Edit recipe form submission
+    document.getElementById('editRecipeForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const index = document.getElementById('editRecipeIndex').value;
+      
+      // Collect ingredients
+      const ingredientInputs = document.querySelectorAll('#editIngredientsList .ingredient-input');
+      const ingredients = [];
+      ingredientInputs.forEach(input => {
+        if (input.value.trim()) {
+          ingredients.push(input.value.trim());
+        }
+      });
+      
+      // Collect instructions
+      const instructionInputs = document.querySelectorAll('#editInstructionsList .instruction-input');
+      const instructions = [];
+      instructionInputs.forEach(input => {
+        if (input.value.trim()) {
+          instructions.push(input.value.trim());
+        }
+      });
+      
+      // Process tags
+      const tagsInput = document.getElementById('editRecipeTags').value;
+      const tags = tagsInput ? tagsInput.split(',').map(tag => tag.trim()) : [];
+      
+      // Update recipe
+      recipes[index] = {
+        title: document.getElementById('editRecipeTitle').value.trim(),
+        cookTime: document.getElementById('editRecipeCookTime').value.trim(),
+        imageUrl: document.getElementById('editRecipeImage').value.trim() || '/api/placeholder/400/300',
+        tags: tags,
+        ingredients: ingredients,
+        instructions: instructions,
+        sourceUrl: document.getElementById('editRecipeSource').value.trim() || ''
+      };
+      
+      // Save to storage
+      storage.setItem('recipes', JSON.stringify(recipes));
+      
+      // Close modal and update display
+      editModal.style.display = 'none';
+      
+      // If we're in the all recipes tab, update the displayed recipe
+      if (document.getElementById('allRecipesTab').classList.contains('active')) {
+        generateRecipesList();
+      }
+      
+      showNotification('Receptet har uppdaterats', 'success');
+    });
+
+    // Search recipes
+    searchInput.addEventListener('input', generateRecipesList);
+
+    // Export recipes
+    exportBtn.addEventListener('click', () => {
+      const data = JSON.stringify(recipes, null, 2);
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'vildmarksrecept.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      showNotification('Recept har exporterats', 'success');
+    });
+
+    // Import recipes
+    importBtn.addEventListener('click', () => {
+      fileInput.click();
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const importedRecipes = JSON.parse(event.target.result);
+          
+          if (!Array.isArray(importedRecipes)) {
+            showNotification('Ogiltigt receptformat. Import misslyckades.', 'error');
+            return;
+          }
+          
+          // Merge imported recipes with existing ones
+          recipes = [...recipes, ...importedRecipes];
+          storage.setItem('recipes', JSON.stringify(recipes));
+          
+          // Reset the file input
+          fileInput.value = '';
+          
+          // If we're in the all recipes tab, update the recipes list
+          if (document.getElementById('allRecipesTab').classList.contains('active')) {
+            generateRecipesList();
+          }
+          
+          showNotification(`${importedRecipes.length} recept har importerats`, 'success');
+        } catch (error) {
+          showNotification('Kunde inte importera recept. Ogiltigt JSON-format.', 'error');
+        }
+      };
+      reader.readAsText(file);
+    });
+
+    // Initialize the app
+    // Add initial ingredient and instruction rows
+    createInputRow(document.getElementById('ingredientsList'), 'ingredient-input', 'ingredient-delete-btn');
+    createInputRow(document.getElementById('instructionsList'), 'instruction-input', 'instruction-delete-btn');
+  </script>
+</body>
+</html>
